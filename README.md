@@ -56,9 +56,8 @@ Diabetes status: Including both Type 1 and Type 2 diabetes mellitus (based on me
 Primary outcome:
 - Improved EF: defined as EF after cardiac intervention minus EF before intervention >= 5% (measured by echocardiogram)
 
-Secondary outcomes:
-- ... Any? ...
-
+Secondary outcome:
+- EF improved >=10%
 
 ## 3) Statistics
 Diagnostic value of exposure variables on primary and secondary outcomes will be visualized using receiver operator curves (:ROC).
