@@ -4,10 +4,10 @@ This project contains the analysis for the paper on the predictive values of car
 ## Research question
 We aim to investigate whether PET-scans with <sup>82</sup>Rb and dynamic FDG prior to coronary revascularization procedure can predict improvement of left ventricular EF in patients with ischemic heart failure (:HF). Secondarily, we aim to investigate if the predictive values of the PET parameters differ in these patients depending on diabetes status.
 
-Patients were recruited as a part of a study on cardiac insulin resistance and survival in patients with ischemic HF (n=131). Of those, the X patients who underwent an intervention (PCI with CTO, PCI without CTO, and/or CABG) were recruited in this study.
+Patients were recruited as a part of a study on cardiac insulin resistance and survival in patients with ischemic HF (n=131). Of those, the 44 patients who underwent a successful revascularization procedure were recruited in this study.
 
 ## About this repository
-The purpose of this repository is to provide transparency about the analysis and allow other researchers to *replicate* the analysis. Due to privacy concerns, the original data is NOT available in the repository. Thus, it is not possible *reproduce* the analysis presented in the paper. Upon request, the corresponding author will detail restrictions to data availability and under which conditions access to some of the data may be provided.
+The purpose of this repository is to provide transparency about the analysis and allow other researchers to replicate the analysis. Due to privacy concerns, the original data is NOT available in the repository. Upon request, the corresponding author will detail restrictions to data availability and under which conditions access to some of the data may be provided.
 
 ## Abbreviations
 | Abbreviation | Meaning                                             |
@@ -72,16 +72,112 @@ In addition, optimal cutoffs will be presented in a table for each exposure-outc
 
 All analyses, tables and graphs will be reported for total patient cohort and stratified by diabetes status.
 
-Patients with missing data on one or more exposure variables will be excluded from the relevant analysis/analyses.
+Patients with missing data on one an exposure variable will be excluded from the relevant analysis.
 
-Analyses will be performed in Stata Statistical Software v 16.1 (College Station, Texas 77845 USA) using the *diagt* package (ref).
+Analyses will be performed in Stata Statistical Software v 16.1 (College Station, Texas 77845 USA) using the *diagt* package ([link](https://ideas.repec.org/c/boc/bocode/s423401.html)).
 
 ## 4) Table shells
-Table 1 - Patient Characteristics, Ejection Fraction, and Cardiac Interventions
+**Table 1** - Patient Characteristics, PET measurements, and Cardiac Status by Diabetes Status
 
-Table 2 - PET Measurements
+|                                                                           | Total | Diabetics | Non-diabetics |
+|---------------------------------------------------------------------------|-------|-----------|---------------|
+| **Patient characteristics**                                               |       |           |               |
+| Patients, n                                                               |       |           |               |
+| Age in years, mean (SD)                                                   |       |           |               |
+| Sex                                                                       |       |           |               |
+| - Men                                                                     |       |           |               |
+| - Women                                                                   |       |           |               |
+| BMI in kg/m2, mean (SD)                                                   |       |           |               |
+| P-glucose during HEC in mM, mean (SD)                                     |       |           |               |
+| Glucose infusion rate during HEC in mg/kg/min, mean (SD)                  |       |           |               |
+| **Cardiac status**                                                        |       |           |               |
+| Ejection-fraction on echocardiogram in %, mean (SD)                       |       |           |               |
+| - Before intervention                                                     |       |           |               |
+| - After intervention                                                      |       |           |               |
+| Types of intervention, n (%)                                              |       |           |               |
+| - PCI without CTO                                                         |       |           |               |
+| - PCI with CTO                                                            |       |           |               |
+| - CABG                                                                    |       |           |               |
+| - PCI and CABG combined                                                   |       |           |               |
+| Area of intervention, n (%)                                               |       |           |               |
+| - LAD                                                                     |       |           |               |
+| - LCX                                                                     |       |           |               |
+| - RCA                                                                     |       |           |               |
+| - Multiple areas                                                          |       |           |               |
+| **PET measurements**                                                      |       |           |               |
+| Scar tissue in %, mean (SD)                                               |       |           |               |
+| Hibernating tissue in %, mean (SD)                                        |       |           |               |
+| - Overall                                                                 |       |           |               |
+| - Area of intervention in counts  *                                       |       |           |               |
+| Coronary flow reserve, mean (SD)                                          |       |           |               |
+| - Overall                                                                 |       |           |               |
+| - Area of intervention *                                                  |       |           |               |
+| Myocardial glucose uptake during HEC in µmol/min/100g tissue, mean (SD) # |       |           |               |
+| - Overall                                                                 |       |           |               |
+| - Remote area                                                             |       |           |               |
+| - Hibernating area                                                        |       |           |               |
 
-Table 3 - Diagnostic Value of PET Measures on Improved EF after Intervention
+Notes: Mean (SD) will be changed to median (IQR) if data are non-parametrically distributed.
+
+'* For patients with interventions in more than one area, average will be reported.
+
+'# Overall MGU is defined as average of global cardiac MGU. Remote area is defined as area with highest FDG-uptake and lowest amount of scar tissue. Hibernating area is defined as the area with the highest count of hibernating spots; in case two or three areas have same number of spots, then the average will be reported.
+
+
+
+**Supplementary table** - Same as table 1 but by Improvement after Revascularization Procedure
+
+|                        | Total | EF improved | Not improved |
+|------------------------|-------|-------------|--------------|
+| (same rows as table 1) |       |             |              |
+
+Notes: EF improvement by 5% or more.
+
+
+**Table 2** - Predictive value of PET measurements on 5% and 10% EF improvement
+
+|                                      | AUC | Sensitivity at optimal cutoff | Specificity at optimal cutoff |
+|--------------------------------------|-----|-------------------------------|-------------------------------|
+| **EF improvement >=5%**              |     |                               |                               |
+| Hibernating tissue                   |     |                               |                               |
+| -   (by table 1 subgroups)           | 0.123 (0.012-0.234) |  12.3%        |          23.4%                |
+| Scar tissue                          |     |                               |                               |
+| Coronary flow reserve                |     |                               |                               |
+| -   (by table 1 subgroups)           |     |                               |                               |
+| Myocardial glucose uptake during HEC |     |                               |                               |
+| -   (by table 1 subgroups)           |     |                               |                               |
+| **EF improvement >=10%**             |     |                               |                               |
+| (Same as above)                      |     |                               |                               |
+
+
+**Table 3** - AUC of PET Measurements by Patient Characteristics
+
+|                                    | Hibernation, overall | Hibernation, AoI | Scar tissue | CFR, overall | CFR, AoI | MGU |
+|------------------------------------|----------------------|------------------|-------------|--------------|----------|-----|
+| **Patient characteristics**        |                      |                  |             |              |          |     |
+| Age                                |                      |                  |             |              |          |     |
+| -   Below median                   | 0.123 (0.012-0.234)  |                  |             |              |          |     |
+| -   Above median                   |                      |                  |             |              |          |     |
+| Sex                                |                      |                  |             |              |          |     |
+| -   Men                            |                      |                  |             |              |          |     |
+| -   Women                          |                      |                  |             |              |          |     |
+| Diabetes                           |                      |                  |             |              |          |     |
+| -   Yes                            |                      |                  |             |              |          |     |
+| -   No                             |                      |                  |             |              |          |     |
+| **Cardiac status**                 |                      |                  |             |              |          |     |
+| Pre-intervention ejection-fraction |                      |                  |             |              |          |     |
+| -   Below median                   |                      |                  |             |              |          |     |
+| -   Above median                   |                      |                  |             |              |          |     |
+| Area of intervention               |                      |                  |             |              |          |     |
+| -   LAD                            |                      |                  |             |              |          |     |
+| -   LCX                            |                      |                  |             |              |          |     |
+| -   RCA                            |                      |                  |             |              |          |     |
+| -   Multiple areas                 |                      |                  |             |              |          |     |
+
+Notes: AUC calculated on 5% EF improvement.
+
+
+
 
 ## 5) Figure layout
 Figure 1 - ROC Graphs for each Exposure on Improved Ejection Fraction
