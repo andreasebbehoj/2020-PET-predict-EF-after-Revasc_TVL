@@ -184,7 +184,7 @@ Notes: AUC calculated on 5% EF improvement.
 ## 5) Figure layout
 Figure 1 - ROC Graphs for each Exposure on Improved Ejection Fraction >=5%
 
-Figure 2 - ROC Graphs for each Exposure on >=10%
+Figure 2 - ROC Graphs for each Exposure on Improved Ejection Fraction >=10%
 
 
 ## 6) Change log
