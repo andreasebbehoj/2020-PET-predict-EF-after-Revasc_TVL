@@ -138,8 +138,8 @@ Notes: EF improvement by 5% or more.
 
 **Table 2** - Predictive value of PET measurements on 5% and 10% EF improvement
 
-|                                      | AUC | Sensitivity at optimal cutoff | Specificity at optimal cutoff |
-|--------------------------------------|-----|-------------------------------|-------------------------------|
+|                                      | AUC | Sensitivity at optimal cutoff | Specificity at optimal cutoff | PPV | NPV |
+|--------------------------------------|-----|-------------------------------|-------------------------------|-----|-----|
 | **EF improvement >=5%**              |     |                               |                               |
 | Hibernating tissue                   |     |                               |                               |
 | -   (by table 1 subgroups)           | 0.123 (0.012-0.234) |  12.3%        |          23.4%                |
