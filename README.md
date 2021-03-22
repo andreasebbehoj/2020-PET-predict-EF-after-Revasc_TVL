@@ -196,6 +196,7 @@ The development of the Stata code is documented in GitHub's "commits" section, a
 
 ### Changes before analysis (prespecified)
 - 1.0 Initial draft by TVL and ALE.
+- 1.1 SAP completed after discussion with LG
 
 ### Changes after initial analysis (post hoc analyses)
 ...
