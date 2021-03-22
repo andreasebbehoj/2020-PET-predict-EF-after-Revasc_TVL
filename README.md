@@ -25,7 +25,9 @@ The purpose of this repository is to provide transparency about the analysis and
 | PCI          | Percutaneous coronary intervention                  |
 | <sup>82</sup>Rb-PET       | Rubidium-82 positron emission tomography            |
 | SAP          | Statistical analysis plan                           |
-
+| NPV          | Negative predictive value                           |
+| PPV          | Positive predictive value                           |
+| ROC          | Receiver operator curve                             |
 
 # Statistical analysis plan
 This section describes the SAP in terms of:
