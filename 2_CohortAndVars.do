@@ -1,6 +1,31 @@
 ***** 2_CohortAndVars.do *****
 use "Input/Viabdyn_131patients_TVL 2021-01-14.dta", clear
 
+
+*** Define and restrict to cohort
+putdocx clear
+putdocx begin
+putdocx paragraph, style(Heading2)
+putdocx text ("Patient flow")
+putdocx paragraph
+
+count
+putdocx text ("`r(N)' patients in Viabdyn dataset")
+
+drop if itv==0
+putdocx text ("`r(N_drop)' excluded as they did not undergo an intervention")
+drop itv 
+
+drop if mi(preEKKOEF) | mi(postEKKOEF)
+putdocx text ("`r(N_drop)' excluded as pre or post echo-EF was missing")
+
+count
+putdocx text ("Final cohort was `r(N)' patients")
+
+putdocx save Output/TextPatientFlow, replace
+
+
+
 *** General formatting
 * Var names in lower case
 qui: ds
