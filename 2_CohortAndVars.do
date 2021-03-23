@@ -71,10 +71,45 @@ label var ef_sec "EF improved 10% or more after intervention"
 
 
 
-*** Define exposures
+*** Define PET measures (exposures)
+** Scar tissue 
+rename arvæv pet_scar
+label var pet_scar "Scar tissue in %"
+
+** Hibernating tissue
+describe *hiber*
+* Overall (in %)
+rename hibernation pet_hiber_overall
+label var pet_hiber_overall "Hibernating tissue in %;Overall"
+
+* By area (in counts)
+rename tpdhibernationantalsegmenter hibersegment
+
+* In AoI (in counts)
+
+drop hibersegment
 
 
-*** Define other variables
+** Coronary flow reserve
+describe *cfr*
+* Overall
+rename cfrtotal pet_cfr_overall
+label var pet_cfr_overall "Coronary flow reserve;Overall"
+
+* AoI
+
+
+** Myocardial glucose uptake
+describe *mgu*
+* Overall
+rename mgupatlakave pet_mgu_overall 
+label var pet_mgu_overall "Myocardial glucose uptake durnig HEC in µmol/min/100g tissue;Overall"
+
+* Remote area
+rename mgupatlak pet_mgu_remote 
+label var pet_mgu_remote "Myocardial glucose uptake durnig HEC in µmol/min/100g tissue;Remote area"
+
+* AoI
 
 
 *** Define and restrict to cohort
