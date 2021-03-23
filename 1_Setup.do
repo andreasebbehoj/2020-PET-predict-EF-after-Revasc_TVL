@@ -21,6 +21,7 @@ ssc install colrspace, replace
 
 
 *** Define custom programs
+global F4 = "codebook "
 
 ** Convert variable+labels from missing to non-missing integers
 program define conv_missing
