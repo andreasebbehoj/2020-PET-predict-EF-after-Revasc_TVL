@@ -33,6 +33,7 @@ foreach var in `r(varlist)' {
 	local name = lower("`var'")
 	capture: rename `var' `name'
 }
+format %d dato skanningsdato datodød censurdato
 
 
 *** Define patients vars
@@ -63,7 +64,7 @@ rename meangir pat_meangir
 label var pat_meangir "Glucose infusion rate during HEC in mg/kg/min"
 drop gir* Gir*
 
-* Intervention (groups)
+* Area of intervention
 recast int itv*
 format %10.0g itv*
 
@@ -78,6 +79,29 @@ recode itv_cat (.=3) if itv_rca==1
 label define itv_cat_ 1 "LAD" 2 "LCX" 3 "RCA" 4 "Multiple areas"
 label value itv_cat itv_cat_
 label var itv_cat "Area of intervention"
+
+* Types of intervention
+/*Confirm with TVL: correct def of interventions?*/
+foreach pro in cabg cto pci {
+    gen itvtype_`pro' = 1 if strpos(lower(behdato), "`pro'")
+}
+
+gen itvtype = 1 if itvtype_cabg==1 
+recode itvtype (.=2) if itvtype_cto==1
+recode itvtype (.=3) if itvtype_pci==1
+label var itvtype "Type of intervention"
+label define itvtype_ 1 "CABG" 2 "PCI with CTO" 3 "PCI without CTO"
+label value itvtype itvtype_
+drop itvtype_*
+
+* Diabetes
+/*Confirm with TVL: definition of diabetes?*/
+gen pat_dm = 1 if diabetes=="Diabetes"
+recode pat_dm (.=0) if diabetes=="Non-diabetic"
+label define pat_dm_ 0 "Non-diabetics" 1 "Diabetics"
+label value pat_dm pat_dm_
+label var pat_dm "Diabetes status"
+drop diabetes*
 
 
 
@@ -101,6 +125,7 @@ label var ef_sec "EF improved 10% or more after intervention"
 rename arvæv pet_scar
 label var pet_scar "Scar tissue in %"
 
+
 ** Hibernating tissue
 describe *hiber*
 * Overall (in %)
@@ -108,50 +133,71 @@ rename hibernation pet_hiber_overall
 label var pet_hiber_overall "Hibernating tissue in %;Overall"
 
 * By area (in counts)
-rename tpdhibernationantalsegmenter hibersegment
+rename tpdhibernationantalsegmenter pet_hibersegments
+replace pet_hibersegments = itrim(trim(pet_hibersegments))
+foreach area in LAD LCx RCA {
+  	local varname = lower("`area'")
+	gen pet_hiberseg_n_`varname' = real(substr(pet_hibersegments, strpos(pet_hibersegments, "`area'")+4, 1))
+}
 
-* In AoI (in counts)
+* In AoI (in % counts of maximum, averaged across AoIs)
+/*Confirm with TVL: standardization of hibernating areas*/
+gen hiberitv_lad = pet_hiberseg_n_lad / 7 if itv_lad==1 // Maximum 7
+gen hiberitv_lcx = pet_hiberseg_n_lcx / 5 if itv_lcx==1 // Maximum 5
+gen hiberitv_rca = pet_hiberseg_n_rca / 5 if itv_rca==1 // Maximum 5
 
-drop hibersegment
+
+egen sum = rowtotal(hiberitv_*), missing
+gen pet_hiber_aoi = sum/itv_n
+label var pet_hiber_aoi "Hibernating tissue in %;Area of intervention *"
+drop sum pet_hibersegments hiberitv_*
 
 
-** Coronary flow reserve
+** Coronary flow reserve (in average across AoIs, has no unit)
 describe *cfr*
 * Overall
 rename cfrtotal pet_cfr_overall
 label var pet_cfr_overall "Coronary flow reserve;Overall"
 
 * AoI
+foreach area in lad lcx rca {
+	gen cfritv_`area' = cfr`area' if itv_`area'==1
+}
+egen sum = rowtotal(cfritv_*), missing
+gen pet_cfr_aoi = sum/itv_n
+label var pet_cfr_aoi "Coronary flow reserve;Area of intervention #"
+drop sum cfritv_*
 
 
 ** Myocardial glucose uptake
 describe *mgu*
 * Overall
 rename mgupatlakave pet_mgu_overall 
-label var pet_mgu_overall "Myocardial glucose uptake durnig HEC in µmol/min/100g tissue;Overall"
+label var pet_mgu_overall "MGU during HEC in µmol/min/100g tissue;Overall"
 
 * Remote area
 rename mgupatlak pet_mgu_remote 
-label var pet_mgu_remote "Myocardial glucose uptake durnig HEC in µmol/min/100g tissue;Remote area"
+label var pet_mgu_remote "MGU during HEC in µmol/min/100g tissue;Remote area"
 
 * AoI
+foreach area in lad lcx rca {
+	gen mguitv_`area' = mgupatlak`area' if itv_`area'==1
+}
+egen sum = rowtotal(mguitv_*), missing
+gen pet_mgu_aoi = sum/itv_n
+label var pet_mgu_aoi "MGU during HEC in µmol/min/100g tissue;Area of intervention"
+drop sum mguitv_*
 
-
-*** Define and restrict to cohort
-** Report
-putdocx clear
-putdocx begin
-putdocx paragraph, style(Heading2)
-putdocx text ("Patient flow")
-putdocx paragraph
-putdocx text ("Final cohort was")
-putdocx save Output/TextPatientFlow, replace
 
 
 *** Export data
 * Remove irrelevant vars
-
+drop navn cpr nodash dato 
 * Sort and reorder
+sort id
+order _all, alpha
+order id pat_* ef_* itv* pet_*
+
 
 * Save
 save Data/cohort.dta, replace
