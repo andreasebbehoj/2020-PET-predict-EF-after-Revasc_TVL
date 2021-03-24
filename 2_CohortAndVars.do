@@ -56,6 +56,7 @@ label value pat_sex pat_sex_
 drop sex
 
 * BMI
+replace højde = 172 if højde==72 // One patient with wrong height 
 gen pat_bmi = vægt/(højde/100)^2
 label var pat_bmi "BMI in kg/m2"
 drop højde vægt
@@ -101,7 +102,6 @@ label value itvtype itvtype_
 drop itvtype_*
 
 * Diabetes
-/*Confirm with TVL: definition of diabetes?*/
 gen pat_dm = 1 if diabetes=="Diabetes"
 recode pat_dm (.=0) if diabetes=="Non-diabetic"
 label define pat_dm_ 0 "Non-diabetics" 1 "Diabetics"
@@ -166,8 +166,8 @@ label var pet_hiber_aoi "Hibernating tissue in %;Area of intervention *"
 drop sum pet_hibersegments hiberitv_*
 
 
-** Coronary flow reserve (in average across AoIs, has no unit)
-describe *cfr*
+** Coronary flow reserve (stress-flow/rest-flow, has no unit)
+describe *cfr* // 8 patients wo. CFR, since they could not tolerate adenosis-induced stress-flow
 * Overall
 rename cfrtotal pet_cfr_overall
 label var pet_cfr_overall "Coronary flow reserve;Overall"
@@ -210,7 +210,7 @@ drop navn cpr nodash dato
 sort id
 order _all, alpha
 order id pat_* ef_* itv* pet_*
-
+drop alderkat-Årsag2
 
 * Save
 save Data/cohort.dta, replace
