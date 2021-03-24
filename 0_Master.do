@@ -43,6 +43,7 @@ This section:
 - Export graphs
 - Generate supplementary results
 */
+global expvars = "pet_hiber_overall pet_hiber_aoi pet_scar pet_cfr_overall pet_cfr_aoi pet_mgu_overall pet_mgu_remote pet_mgu_aoi"
 
 ** Patient characteristics
 
@@ -54,6 +55,7 @@ This section:
 
 
 ** ROC graphs
+do 3_FigROC.do
 
 
 

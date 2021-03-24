@@ -7,9 +7,9 @@ grstyle init graphlayout, replace
 grstyle set plain // No plot region color, white background + other tweaks
 
 ** Size
-grstyle set graphsize 560pt 1200pt // in pixels, default is 5.5 inches *72 pt/inch = 396pt
-grstyle set symbolsize vlarge
-grstyle set size 25pt: axis_title // X and Y axis text size
+grstyle set graphsize 1200pt 1200pt // in pixels, default is 5.5 inches *72 pt/inch = 396pt
+grstyle set symbolsize small
+grstyle set size 20pt: axis_title // X and Y axis text size
 
 ** Axis
 grstyle anglestyle vertical_tick horizontal // Horizontal "tick"text on y-axis
