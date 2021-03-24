@@ -41,6 +41,12 @@ format %d dato skanningsdato datodød censurdato
 rename alder pat_age
 label var pat_age "Age in years"
 
+qui: su pat_age, detail
+gen pat_age_median = pat_age>=`r(p50)'
+label var pat_age_median "Age" 
+label define pat_age_median_ 0 "Below median age" 1 "Median age or above"
+label value pat_age_median pat_age_median_
+
 * Sex
 gen pat_sex = 0 if lower(sex)=="kvinde"
 replace pat_sex = 1 if lower(sex)=="mand"
@@ -117,6 +123,13 @@ label var ef_prim "EF improved 5% or more after intervention"
 
 recode ef_diff (10/max=1 "Yes") (min/9.99=0 "No"), gen(ef_sec) label(ef_sec_) 
 label var ef_sec "EF improved 10% or more after intervention"
+
+* Pre intervention EF as covar
+qui: su ef_pre, detail
+gen ef_pre_median = ef_pre>=`r(p50)'
+label var ef_pre_median "Pre-intervention EF"
+label define ef_pre_median_ 0 "Below median EF" 1 "Median EF or above"
+label value ef_pre_median ef_pre_median_
 
 
 
