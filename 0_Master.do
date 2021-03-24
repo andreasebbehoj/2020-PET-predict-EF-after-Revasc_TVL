@@ -21,6 +21,7 @@ This section:
 - Defines common settings for figures and tables
 */
 do 1_Setup.do
+do 1_addtab.do
 do 1_FigTabLayout.do
 
 
@@ -46,7 +47,7 @@ This section:
 global expvars = "pet_hiber_overall pet_hiber_aoi pet_scar pet_cfr_overall pet_cfr_aoi pet_mgu_overall pet_mgu_remote pet_mgu_aoi"
 
 ** Patient characteristics
-
+do 3_TabPatCharByDM.do
 
 ** Overall performance
 
