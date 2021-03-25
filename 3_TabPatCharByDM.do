@@ -1,5 +1,5 @@
 ***** 3_TabPatCharByDM.do *****
-capture: frame change default
+frame reset
 use Data/cohort.dta, clear
 
 *** Generate table
@@ -20,7 +20,7 @@ addtab_no if pat_sex==0, colpercent var(pat_sex) rowname("- Female")
 ** Cardiac status
 addtab_header, varname(BOLD) rowname("Cardiac status")
 
-addtab_header, varname(GROUPHEADER) rowname("Ejection-fraction on echocaridogram in %, mean (SD)")
+addtab_header, varname(GROUPHEADER) rowname("Ejection-fraction on echocardiogram in %, mean (SD)")
 addtab_estimate, est(mean) par(sd) var(ef_pre) rowname("- Before intervention")
 addtab_estimate, est(mean) par(sd) var(ef_post) rowname("- After intervention")
 

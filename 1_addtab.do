@@ -40,11 +40,12 @@ global addtab_vallab_total = "Total"
 capture: frame drop $addtab_frame
 frame create $addtab_frame
 frame $addtab_frame {
-	gen varname = ""
-	gen rowname = ""
+	newrow
+	qui: gen varname = ""
+	qui: gen rowname = ""
 	format %-5s varname rowname
 	foreach cat of global addtab_columncats {
-		gen col_`cat' = ""
+		qui: gen col_`cat' = "${addtab_vallab_`cat'}" if _n==1
 		label var col_`cat' "${addtab_vallab_`cat'}"
 	}
 }
