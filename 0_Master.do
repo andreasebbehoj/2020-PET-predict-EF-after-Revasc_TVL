@@ -48,6 +48,7 @@ global expvars = "pet_hiber_overall pet_hiber_aoi pet_scar pet_cfr_overall pet_c
 
 ** Patient characteristics
 do 3_TabPatCharByDM.do
+do 3_TabPatCharByEF.do
 
 ** Overall performance
 
