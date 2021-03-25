@@ -67,9 +67,10 @@ This section:
 - Add headers and footnotes to graphs and tables
 - Combine all documents into FigTablesCombined and ReportCombined
 */
+do 4_Report.do
 
 
-
+frame reset
 file close _all
 window manage close graph _all
 capture: log close
