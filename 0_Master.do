@@ -44,6 +44,11 @@ This section:
 - Export graphs
 - Generate supplementary results
 */
+
+/** Check model assumptions
+do 3_Assumptions.do
+*/
+
 global expvars = "pet_hiber_overall pet_hiber_aoi pet_scar pet_cfr_overall pet_cfr_aoi pet_mgu_overall pet_mgu_remote pet_mgu_aoi"
 
 ** Patient characteristics

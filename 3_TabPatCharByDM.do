@@ -39,20 +39,20 @@ addtab_no if itv_cat==4, colpercent var(itv_cat) rowname("- Multiple areas")
 ** PET measurements
 addtab_header, varname(BOLD) rowname("PET measurements")
 
-addtab_estimate, est(mean) par(sd) var(pet_scar) rowname("Scar tissue in %, mean (SD)")
+addtab_estimate, est(p50) par(iqr) var(pet_scar) rowname("Scar tissue in %, median (IQR)")
 
-addtab_header, varname(GROUPHEADER) rowname("Hibernating tissue, mean (SD)")
-addtab_estimate, est(mean) par(sd) var(pet_hiber_overall) rowname("- Overall in %")
-addtab_estimate, est(mean) par(sd) var(pet_hiber_aoi) rowname("- Area of intervention in counts *")
+addtab_header, varname(GROUPHEADER) rowname("Hibernating tissue, median (IQR)")
+addtab_estimate, est(p50) par(iqr) var(pet_hiber_overall) rowname("- Overall in %")
+addtab_estimate, est(p50) par(iqr) var(pet_hiber_aoi) rowname("- Area of intervention in counts *")
 
-addtab_header, varname(GROUPHEADER) rowname("Coronary flow reserve, mean (SD)")
-addtab_estimate, est(mean) par(sd) var(pet_cfr_overall) rowname("- Overall")
-addtab_estimate, est(mean) par(sd) var(pet_cfr_aoi) rowname("- Area of intervention")
+addtab_header, varname(GROUPHEADER) rowname("Coronary flow reserve, median (IQR)")
+addtab_estimate, est(p50) par(iqr) var(pet_cfr_overall) rowname("- Overall")
+addtab_estimate, est(p50) par(iqr) var(pet_cfr_aoi) rowname("- Area of intervention")
 
-addtab_header, varname(GROUPHEADER) rowname("Myocardial glucose uptake during in µmol/min/100g tissue, mean (SD)")
-addtab_estimate, est(mean) par(sd) var(pet_mgu_overall) rowname("- Overall")
-addtab_estimate, est(mean) par(sd) var(pet_mgu_remote) rowname("- Remote area")
-addtab_estimate, est(mean) par(sd) var(pet_mgu_aoi) rowname("- Area of intervention") 
+addtab_header, varname(GROUPHEADER) rowname("Myocardial glucose uptake during in µmol/min/100g tissue, median (IQR)")
+addtab_estimate, est(p50) par(iqr) var(pet_mgu_overall) rowname("- Overall")
+addtab_estimate, est(p50) par(iqr) var(pet_mgu_remote) rowname("- Remote area")
+addtab_estimate, est(p50) par(iqr) var(pet_mgu_aoi) rowname("- Area of intervention") 
 // Confirm with TVL/LG: MGU in AoI or hibernating area?
 
 
