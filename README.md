@@ -198,8 +198,12 @@ The development of the Stata code is documented in GitHub's "commits" section, a
 - 1.0 Initial draft by TVL and ALE.
 - 1.1 SAP completed after discussion with LG
 
-### Changes after initial analysis (post hoc analyses)
-...
+### Deviations from SAP after initial analysis (post hoc)
+- 2.0 After initial analysis and meeting between TVL, ALE, ES and LG 29/3-21, the following changes to the SAP were decided:
+    - Dropped table with sensitivity, specificity, PPV and NPV at "optimal cutoff" due to poor AUC.
+    - Added new table showing baseline differences for patients excluded due to no intervention.
+    - Added new table showing agreement between areas with hibernating tissue and areas of intervention.
+    - MGU in hibernating area changed to MGU in area of intervention due to discongruence between AoI and hibernating area.
 
 ### Changes after submission
 ...
