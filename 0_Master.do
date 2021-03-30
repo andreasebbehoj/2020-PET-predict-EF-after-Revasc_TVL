@@ -55,11 +55,7 @@ global expvars = "pet_hiber_overall pet_hiber_aoi pet_scar pet_cfr_overall pet_c
 do 3_TabPatCharByDM.do
 do 3_TabPatCharByEF.do
 
-** Overall performance
-
-
-** AUC by subgroups
-
+** Overall AUC and by subgroups
 do 3_TabAucByCovars.do
 
 ** ROC graphs

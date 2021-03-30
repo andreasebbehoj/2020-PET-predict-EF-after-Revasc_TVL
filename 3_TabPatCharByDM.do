@@ -6,7 +6,7 @@ use Data/cohort.dta, clear
 addtab_setup, frame(table) columnvar(pat_dm)
 
 * N patients
-addtab_no, var(id) rowname("Patients, N") 
+addtab_no, var(id) rowname("Patients, N")
 
 ** Patient characteristics
 addtab_header, varname(BOLD) rowname("Patient characteristics")
@@ -52,8 +52,7 @@ addtab_estimate, est(p50) par(iqr) var(pet_cfr_aoi) rowname("- Area of intervent
 addtab_header, varname(GROUPHEADER) rowname("Myocardial glucose uptake during in µmol/min/100g tissue, median (IQR)")
 addtab_estimate, est(p50) par(iqr) var(pet_mgu_overall) rowname("- Overall")
 addtab_estimate, est(p50) par(iqr) var(pet_mgu_remote) rowname("- Remote area")
-addtab_estimate, est(p50) par(iqr) var(pet_mgu_aoi) rowname("- Area of intervention") 
-// Confirm with TVL/LG: MGU in AoI or hibernating area?
+addtab_estimate, est(p50) par(iqr) var(pet_mgu_aoi) rowname("- Area of intervention")
 
 
 frame table: save Output/TabPatCharByDM.dta, replace

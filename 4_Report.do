@@ -149,8 +149,8 @@ text_footnote, notes("Some explanation. ") ///
 	linebreak ///
 	abbrev("SD, standard deviation; PCI, percutaneous coronary intervention; CABG, coronary artery bypass grafting; CTO, chronic total occlusion; HEC, hyperinsulinemic euglycemic clamp")
 
-* Tab 3
-text_heading2, text("Table 3 - AUC (95% CI) of PET Measurements by Patient Characteristics") sectionbreak landscape
+* Tab 2
+text_heading2, text("Table 2 - AUC (95% CI) of PET Measurements by Patient Characteristics") sectionbreak landscape
 text_table, file("Output/TabAucByCovars.dta") vars(rowname $expvars) ///
 	header(1) left(1) ///
 	subheader(`"if varname=="BOLD""')
