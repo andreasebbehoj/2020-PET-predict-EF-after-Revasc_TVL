@@ -154,15 +154,13 @@ foreach area in LAD LCx RCA {
 }
 
 * In AoI (in % counts of maximum, averaged across AoIs)
-/*Confirm with TVL: standardization of hibernating areas*/
-gen hiberitv_lad = pet_hiberseg_n_lad / 7 if itv_lad==1 // Maximum 7
-gen hiberitv_lcx = pet_hiberseg_n_lcx / 5 if itv_lcx==1 // Maximum 5
-gen hiberitv_rca = pet_hiberseg_n_rca / 5 if itv_rca==1 // Maximum 5
-
+gen hiberitv_lad = pet_hiberseg_n_lad if itv_lad==1
+gen hiberitv_lcx = pet_hiberseg_n_lcx if itv_lcx==1
+gen hiberitv_rca = pet_hiberseg_n_rca if itv_rca==1
 
 egen sum = rowtotal(hiberitv_*), missing
 gen pet_hiber_aoi = sum/itv_n
-label var pet_hiber_aoi "Hibernating tissue in %;Area of intervention *"
+label var pet_hiber_aoi "Hibernating tissue in n;Area of intervention *"
 drop sum pet_hibersegments hiberitv_*
 
 
@@ -198,7 +196,7 @@ foreach area in lad lcx rca {
 }
 egen sum = rowtotal(mguitv_*), missing
 gen pet_mgu_aoi = sum/itv_n
-label var pet_mgu_aoi "MGU during HEC in µmol/min/100g tissue;Area of intervention"
+label var pet_mgu_aoi "MGU during HEC in µmol/min/100g tissue;Area of intervention §"
 drop sum mguitv_*
 
 
