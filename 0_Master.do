@@ -60,6 +60,7 @@ do 3_TabPatCharByEF.do
 
 ** AUC by subgroups
 
+do 3_TabAucByCovars.do
 
 ** ROC graphs
 do 3_FigROC.do
