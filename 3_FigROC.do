@@ -1,5 +1,6 @@
 ***** 3_FigROC.do *****
 use Data/cohort.dta, clear
+capture: mkdir Output/Roc
 
 foreach expvar of global expvars {
     local label : var label `expvar'
@@ -18,14 +19,14 @@ foreach expvar of global expvars {
 	** Primary
 	qui: logit ef_prim c.`expvar' 
 	qui: lroc, name("Prim_`expvar'", replace) title(`title')
-	qui: graph export "Output/ROC_Prim_`expvar'${exportformat}" $exportoptions
+	qui: graph export "Output/Roc/ROC_Prim_`expvar'${exportformat}" $exportoptions
 	
 	local graphs_prim = "`graphs_prim' Prim_`expvar'"
 	
 	** Secondary
 	qui: logit ef_sec c.`expvar' 
 	qui: lroc, name("Sec_`expvar'", replace) title(`title')
-	qui: graph export "Output/ROC_Sec_`expvar'${exportformat}" $exportoptions
+	qui: graph export "Output/Roc/ROC_Sec_`expvar'${exportformat}" $exportoptions
 	
 	local graphs_sec = "`graphs_sec' Sec_`expvar'"
 }
