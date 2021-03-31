@@ -62,7 +62,8 @@ do 3_TabAucByCovars.do
 ** ROC graphs
 do 3_FigROC.do
 
-
+** AoI and area of hibernation
+do 3_TabAoiAndHiber.do
 
 ***** 4) REPORT
 /*
