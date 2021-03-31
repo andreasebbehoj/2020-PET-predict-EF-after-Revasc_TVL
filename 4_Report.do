@@ -124,8 +124,9 @@ text_fig, image(Output/ROC_Prim_Combined.png) width(7.5 in)
 text_footnote, ///
 	abbrev("EF, ejection-fraction; HEC, hyperinsulinemic euglycemic clamp; MGU, myocardial glucose uptake; ROC, receiver operator curve. ") ///
 	linebreak ///
-	notes("* Hibernating tissue in area of intervention is total number of areas with at least 10% hibernating tissue. Maximum is 17 (7 for LAD, 5 for LCx and 5 for RCA). " ///
-	"# Coronary flow reserve in area of intervention is average CFR across the area(s) of intervention") 
+	notes("* Hibernating tissue in area of intervention is total number of subareas with at least 10% hibernating tissue divided by area(s) of intervention. LAD has 7 subareas, LCx has 5, and RCA has 5. " ///
+	"# Coronary flow reserve in area of intervention is average CFR across the area(s) of intervention. " ///
+	"§ Myocardial glucose uptake during hyperinsulinemic euglycemic clamp in area of intervention is average MGU across area(s) of intervention") 
 
 * Fig 2
 text_heading2, text("Figure 2 - ROC for predicting EF-improvement of 10% or above") sectionbreak
@@ -133,8 +134,10 @@ text_fig, image(Output/ROC_Sec_Combined.png) width(7.5 in)
 text_footnote, ///
 	abbrev("EF, ejection-fraction; HEC, hyperinsulinemic euglycemic clamp; MGU, myocardial glucose uptake; ROC, receiver operator curve. ") ///
 	linebreak ///
-	notes("* Hibernating tissue in area of intervention is total number of areas with at least 10% hibernating tissue. Maximum is 17 (7 for LAD, 5 for LCx and 5 for RCA). " ///
-	"# Coronary flow reserve in area of intervention is average CFR across the area(s) of intervention") 
+	notes("* Hibernating tissue in area of intervention is total number of subareas with at least 10% hibernating tissue divided by area(s) of intervention. LAD has 7 subareas, LCx has 5, and RCA has 5. " ///
+	"# Coronary flow reserve in area of intervention is average CFR across the area(s) of intervention. " ///
+	"§ Myocardial glucose uptake during hyperinsulinemic euglycemic clamp in area of intervention is average MGU across area(s) of intervention") 
+
 
 
 ** Tables
@@ -147,7 +150,7 @@ text_table, file("Output/TabPatCharByDM.dta") vars(rowname col_total col_0 col_1
 	subheader(`"if varname=="BOLD""')
 text_footnote, notes("Some explanation. ") ///
 	linebreak ///
-	abbrev("SD, standard deviation; PCI, percutaneous coronary intervention; CABG, coronary artery bypass grafting; CTO, chronic total occlusion; HEC, hyperinsulinemic euglycemic clamp")
+	abbrev("CABG, coronary artery bypass grafting; CTO, chronic total occlusion; HEC, hyperinsulinemic euglycemic clamp; IQR, inter-quartile range (25th to 75th percentile); LAD, left anterior descendent artery; LCx, left circumflex artery; PCI, percutaneous coronary intervention; RCA, right coronary artery; SD, standard deviation. ")
 
 * Tab 2
 text_heading2, text("Table 2 - AUC (95% CI) of PET Measurements by Patient Characteristics") sectionbreak landscape
@@ -156,7 +159,7 @@ text_table, file("Output/TabAucByCovars.dta") vars(rowname $expvars) ///
 	subheader(`"if varname=="BOLD""')
 text_footnote, notes("ROC AUC for PET measurement predicting a 5% EF improvement after intervention. ") ///
 	linebreak ///
-	abbrev("HEC, hyperinsulinemic euglycemic clamp; MGU, myocardial glucose uptake") 
+	abbrev("EF, ejection-fraction; HEC, hyperinsulinemic euglycemic clamp; MGU, myocardial glucose uptake") 
 
 
 ** Supplementary
@@ -185,7 +188,7 @@ text_heading2, text("Supplementary 3 - Areas of intervention compared to areas o
 text_table, file("Output/TabAoiAndHiber.dta") vars(rowname LAD-None) ///
 	header(1 2) left(1) //
 putdocx table tbl1(1, 2), colspan(9)
-text_footnote, notes("Table includes both patients who underwent some intervention and those who did (i.e. intervention 'None'). ") //
+text_footnote, notes("Table includes both patients who underwent an intervention and those who did not (i.e. intervention 'None'). ") //
 
 /* Confirm with TVL/ES/LG: order of tables and supplementary?*/
 
