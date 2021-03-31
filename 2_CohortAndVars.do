@@ -2,29 +2,6 @@
 use "Input/Viabdyn_131patients_TVL 2021-01-14.dta", clear
 
 
-*** Define and restrict to cohort
-putdocx clear
-putdocx begin
-putdocx paragraph, style(Heading2)
-putdocx text ("Patient flow")
-putdocx paragraph
-
-count
-putdocx text ("`r(N)' patients in Viabdyn dataset")
-
-drop if itv==0
-putdocx text ("`r(N_drop)' excluded as they did not undergo an intervention")
-drop itv 
-
-drop if mi(preEKKOEF) | mi(postEKKOEF)
-putdocx text ("`r(N_drop)' excluded as pre or post echo-EF was missing")
-
-count
-putdocx text ("Final cohort was `r(N)' patients")
-
-putdocx save Output/TextPatientFlow, replace
-
-
 
 *** General formatting
 * Var names in lower case
@@ -88,7 +65,6 @@ label value itv_cat itv_cat_
 label var itv_cat "Area of intervention"
 
 * Types of intervention
-/*Confirm with TVL: correct def of interventions?*/
 foreach pro in cabg cto pci {
     gen itvtype_`pro' = 1 if strpos(lower(behdato), "`pro'")
 }
@@ -126,7 +102,7 @@ label var ef_sec "EF improved 10% or more after intervention"
 
 * Pre intervention EF as covar
 qui: su ef_pre, detail
-gen ef_pre_median = ef_pre>=`r(p50)'
+gen ef_pre_median = ef_pre>=`r(p50)' if !mi(ef_pre)
 label var ef_pre_median "Pre-intervention EF"
 label define ef_pre_median_ 0 "Below median EF" 1 "Median EF or above"
 label value ef_pre_median ef_pre_median_
@@ -201,14 +177,43 @@ drop sum mguitv_*
 
 
 
-*** Export data
+*** Export full data
 * Remove irrelevant vars
 drop navn cpr nodash dato 
+
 * Sort and reorder
 sort id
 order _all, alpha
 order id pat_* ef_* itv* pet_*
+
+* Save
+save Data/cohort_wexcl.dta, replace
+
+
+*** Export cohort data
 drop alderkat-Årsag2
+
+* Patient flow
+putdocx clear
+putdocx begin
+putdocx paragraph, style(Heading2)
+putdocx text ("Patient flow")
+putdocx paragraph
+
+count
+putdocx text ("`r(N)' patients in Viabdyn dataset"), linebreak
+
+drop if itv==0
+putdocx text ("`r(N_drop)' excluded as they did not undergo an intervention"), linebreak
+drop itv 
+
+drop if mi(ef_pre) | mi(ef_post)
+putdocx text ("`r(N_drop)' excluded as pre or post echo-EF was missing"), linebreak
+
+count
+putdocx text ("Final cohort was `r(N)' patients")
+
+putdocx save Output/TextPatientFlow, replace
 
 * Save
 save Data/cohort.dta, replace
