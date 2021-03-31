@@ -171,6 +171,24 @@ text_footnote, notes("Some explanation. ") ///
 	linebreak ///
 	abbrev("SD, standard deviation; PCI, percutaneous coronary intervention; CABG, coronary artery bypass grafting; CTO, chronic total occlusion; HEC, hyperinsulinemic euglycemic clamp")
 
+* Sup 2
+text_heading2, text("Supplementary 2 - Patient characteristics, PET measurements, and cardiac status by intervention versus no intervention") sectionbreak
+text_table, file("Output/TabPatCharExcl.dta") vars(rowname col_total col_0 col_1 col_2) ///
+	header(1) left(1) ///
+	subheader(`"if varname=="BOLD""')
+text_footnote, notes("Some explanation. ") ///
+	linebreak ///
+	abbrev("SD, standard deviation; PCI, percutaneous coronary intervention; CABG, coronary artery bypass grafting; CTO, chronic total occlusion; HEC, hyperinsulinemic euglycemic clamp")
+
+* Sup 3
+text_heading2, text("Supplementary 3 - Areas of intervention compared to areas of hibernation") sectionbreak
+text_table, file("Output/TabAoiAndHiber.dta") vars(rowname LAD-None) ///
+	header(1 2) left(1) //
+putdocx table tbl1(1, 2), colspan(9)
+text_footnote, notes("Table includes both patients who underwent some intervention and those who did (i.e. intervention 'None'). ") //
+
+/* Confirm with TVL/ES/LG: order of tables and supplementary?*/
+
 
 ** Save
 putdocx save "Output/FigTabCombined", replace
