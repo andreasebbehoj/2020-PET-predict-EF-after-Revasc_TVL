@@ -2,6 +2,7 @@
 version 16
 clear all
 file close _all
+frame reset
 
 set more off
 
