@@ -79,6 +79,29 @@ frame table {
 }
 end
 
+** Define abbreviations
+frame create abbrev 
+frame abbrev {
+    input str15 abbrev str80 meaning
+	"Abbreviations" "Meaning"
+	"AUC"	"area under the curve"
+	"CABG"	"coronary artery bypass grafting"
+	"CTO" 	"chronic total occlusion"
+	"EF"	"ejection fraction"
+	"HEC" 	"hyperinsulinemic euglycemic clamp"
+	"IQR"	"inter-quartile range (25th to 75th percentile)"
+	"LAD"	"left anterior descendent artery"
+	"LCx"	"left circumflex artery"
+	"MGU"	"myocardial glucose uptake"
+	"PCI"	"percutaneous coronary intervention"
+	"RCA"	"right coronary artery"
+	"ROC"	"receiver operator curve"
+	"SD"	"standard deviation"
+	end
+	save Output/Abbreviations.dta, replace
+	gen n=_n
+}
+
 ** Footnote
 capture: program drop text_footnote
 program define text_footnote
@@ -87,8 +110,29 @@ syntax, [notes(string) linebreak ABBREViations(string)]
 putdocx paragraph, font("Times new roman", 10, black)
 
 if !mi(`"`abbreviations'"') {
+	local abbrevtext = ""
+	
+	* Lookup abbrev
+	foreach abbrev in `abbreviations' {
+	    frame abbrev {
+		    qui: su n if abbrev=="`abbrev'"
+			if `r(N)'==0 { // Unknown abbrev
+			    di as error "`abbrev' is an unknown abbreviations"
+				error 1
+			}
+			else {
+			    local meaning = meaning[`r(min)']
+			}	
+		}
+		local abbrevtext = "`abbrevtext'`abbrev', `meaning'; "
+	}
+	
+	* Remove last ; and add .
+	local abbrevtext = substr("`abbrevtext'", 1, length("`abbrevtext'")-2) + ". "
+	di "`abbrevtext'"
+	* Add to footnote
 	putdocx text ("Abbreviations:"), bold
-	putdocx text (`" `abbreviations'"'), `linebreak'
+	putdocx text (`" `abbrevtext'"'), `linebreak'
 }
 if !mi(`"`notes'"') {
 	putdocx text ("Notes:"), bold
@@ -122,7 +166,7 @@ text_heading1, text("Figures")
 text_heading2, text("Figure 1 - ROC for predicting EF-improvement of 5% or above")
 text_fig, image(Output/ROC_Prim_Combined.png) width(7.5 in)
 text_footnote, ///
-	abbrev("EF, ejection-fraction; HEC, hyperinsulinemic euglycemic clamp; MGU, myocardial glucose uptake; ROC, receiver operator curve. ") ///
+	abbrev("EF HEC MGU ROC") ///
 	linebreak ///
 	notes("* Hibernating tissue in area of intervention is total number of subareas with at least 10% hibernating tissue divided by area(s) of intervention. LAD has 7 subareas, LCx has 5, and RCA has 5. " ///
 	"# Coronary flow reserve in area of intervention is average CFR across the area(s) of intervention. " ///
@@ -132,7 +176,7 @@ text_footnote, ///
 text_heading2, text("Figure 2 - ROC for predicting EF-improvement of 10% or above") sectionbreak
 text_fig, image(Output/ROC_Sec_Combined.png) width(7.5 in)
 text_footnote, ///
-	abbrev("EF, ejection-fraction; HEC, hyperinsulinemic euglycemic clamp; MGU, myocardial glucose uptake; ROC, receiver operator curve. ") ///
+	abbrev("EF HEC MGU ROC") ///
 	linebreak ///
 	notes("* Hibernating tissue in area of intervention is total number of subareas with at least 10% hibernating tissue divided by area(s) of intervention. LAD has 7 subareas, LCx has 5, and RCA has 5. " ///
 	"# Coronary flow reserve in area of intervention is average CFR across the area(s) of intervention. " ///
@@ -150,7 +194,7 @@ text_table, file("Output/TabPatCharByDM.dta") vars(rowname col_total col_0 col_1
 	subheader(`"if varname=="BOLD""')
 text_footnote, notes("Some explanation. ") ///
 	linebreak ///
-	abbrev("CABG, coronary artery bypass grafting; CTO, chronic total occlusion; HEC, hyperinsulinemic euglycemic clamp; IQR, inter-quartile range (25th to 75th percentile); LAD, left anterior descendent artery; LCx, left circumflex artery; PCI, percutaneous coronary intervention; RCA, right coronary artery; SD, standard deviation. ")
+	abbrev("CABG CTO HEC IQR LAD LCx PCI RCA SD")
 
 * Tab 2
 text_heading2, text("Table 2 - AUC (95% CI) of PET Measurements by Patient Characteristics") sectionbreak landscape
@@ -159,7 +203,7 @@ text_table, file("Output/TabAucByCovars.dta") vars(rowname $expvars) ///
 	subheader(`"if varname=="BOLD""')
 text_footnote, notes("ROC AUC for PET measurement predicting a 5% EF improvement after intervention. ") ///
 	linebreak ///
-	abbrev("EF, ejection-fraction; HEC, hyperinsulinemic euglycemic clamp; MGU, myocardial glucose uptake") 
+	abbrev("AUC EF HEC LAD LCx MGU RCA") 
 
 
 ** Supplementary
@@ -172,7 +216,7 @@ text_table, file("Output/TabPatCharByEF.dta") vars(rowname col_total col_0 col_1
 	subheader(`"if varname=="BOLD""')
 text_footnote, notes("Some explanation. ") ///
 	linebreak ///
-	abbrev("SD, standard deviation; PCI, percutaneous coronary intervention; CABG, coronary artery bypass grafting; CTO, chronic total occlusion; HEC, hyperinsulinemic euglycemic clamp")
+	abbrev("CABG CTO HEC PCI SD")
 
 * Sup 2
 text_heading2, text("Supplementary 2 - Patient characteristics, PET measurements, and cardiac status by intervention versus no intervention") sectionbreak
@@ -181,17 +225,22 @@ text_table, file("Output/TabPatCharExcl.dta") vars(rowname col_total col_0 col_1
 	subheader(`"if varname=="BOLD""')
 text_footnote, notes("Some explanation. ") ///
 	linebreak ///
-	abbrev("SD, standard deviation; PCI, percutaneous coronary intervention; CABG, coronary artery bypass grafting; CTO, chronic total occlusion; HEC, hyperinsulinemic euglycemic clamp")
+	abbrev("CABG CTO HEC PCI SD")
 
 * Sup 3
 text_heading2, text("Supplementary 3 - Areas of intervention compared to areas of hibernation") sectionbreak
 text_table, file("Output/TabAoiAndHiber.dta") vars(rowname LAD-None) ///
 	header(1 2) left(1) //
 putdocx table tbl1(1, 2), colspan(9)
-text_footnote, notes("Table includes both patients who underwent an intervention and those who did not (i.e. intervention 'None'). ") //
+text_footnote, notes("Table includes both patients who underwent an intervention and those who did not (i.e. intervention 'None'). ") ///
+	linebreak ///
+	abbrev("LAD LCx RCA")
 
 /* Confirm with TVL/ES/LG: order of tables and supplementary?*/
 
+** Abbreviations
+text_heading1, text("Abbreviations") sectionbreak
+text_table, file("Output/Abbreviations.dta") vars(abbrev meaning) header(1)
 
 ** Save
 putdocx save "Output/FigTabCombined", replace
