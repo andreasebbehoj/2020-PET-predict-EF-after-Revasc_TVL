@@ -17,15 +17,14 @@ foreach expvar of global expvars {
 	di `"`expvar' - `label' / `title' "'
 
 	** Primary
-	qui: logit ef_prim c.`expvar' 
-	qui: lroc, name("Prim_`expvar'", replace) title(`title')
+	
+	qui: roctab ef_prim `expvar' , graph name("Prim_`expvar'", replace) title(`title')
 	qui: graph export "Output/Roc/ROC_Prim_`expvar'${exportformat}" $exportoptions
 	
 	local graphs_prim = "`graphs_prim' Prim_`expvar'"
 	
 	** Secondary
-	qui: logit ef_sec c.`expvar' 
-	qui: lroc, name("Sec_`expvar'", replace) title(`title')
+	qui: roctab ef_prim `expvar' , graph name("Sec_`expvar'", replace) title(`title')
 	qui: graph export "Output/Roc/ROC_Sec_`expvar'${exportformat}" $exportoptions
 	
 	local graphs_sec = "`graphs_sec' Sec_`expvar'"
