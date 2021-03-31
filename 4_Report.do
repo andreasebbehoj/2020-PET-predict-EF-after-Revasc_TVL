@@ -240,7 +240,7 @@ text_footnote, notes("Table includes both patients who underwent an intervention
 
 ** Abbreviations
 text_heading1, text("Abbreviations") sectionbreak
-text_table, file("Output/Abbreviations.dta") vars(abbrev meaning) header(1)
+text_table, file("Output/Abbreviations.dta") vars(abbrev meaning) header(1) left(1 2)
 
 ** Save
 putdocx save "Output/FigTabCombined", replace
