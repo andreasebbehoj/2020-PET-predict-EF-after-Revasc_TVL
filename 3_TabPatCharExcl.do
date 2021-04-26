@@ -2,7 +2,7 @@
 frame reset
 use Data/cohort_wexcl.dta, clear
 label define ef_prim_ 1 "EF improved 5% or more" 0 "EF not improved" 2 "No intervention", modify
-recode ef_prim (.=2)
+recode ef_prim (.=2) if itv==0
 
 *** Generate table
 addtab_setup, frame(table) columnvar(ef_prim)

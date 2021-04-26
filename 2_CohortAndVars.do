@@ -1,5 +1,5 @@
 ***** 2_CohortAndVars.do *****
-use "Input/Viabdyn_131patients_TVL 2021-01-14.dta", clear
+use "Input/Viabdyn_131patients_TVL 2021-04-05.dta", clear
 
 
 
@@ -11,6 +11,23 @@ foreach var in `r(varlist)' {
 	capture: rename `var' `name'
 }
 format %d dato skanningsdato datodød censurdato
+
+rename preekkoef ef_pre
+rename postekkoef ef_post
+
+
+*** Exclude special cases
+gen excl = 1 if inlist(id, 106) // One patient with failed intervention
+recode excl (.=2) if inlist(id, 60) // One patient with intervention before PET
+
+label define excl_ 1 "Intervention failed" 2 "Intervention was done before PET scan"
+label value excl excl_
+
+* Remove information on excluded
+foreach var in lad lcx rca {
+    replace itv_`var'=. if !mi(excl) 
+}
+replace ef_post = . if !mi(excl)
 
 
 *** Define patients vars
@@ -66,7 +83,7 @@ label var itv_cat "Area of intervention"
 
 * Types of intervention
 foreach pro in cabg cto pci {
-    gen itvtype_`pro' = 1 if strpos(lower(behdato), "`pro'")
+    gen itvtype_`pro' = 1 if strpos(lower(behdato), "`pro'") & itv==1
 }
 
 gen itvtype = 1 if itvtype_cabg==1 
@@ -88,9 +105,6 @@ drop diabetes*
 
 
 *** Define cardiac outcomes (outcomes)
-rename preekkoef ef_pre
-rename postekkoef ef_post
-
 gen ef_diff = ef_post-ef_pre
 label var ef_diff "Change in echo-EF pre/post intervention"
 
@@ -184,7 +198,7 @@ drop navn cpr nodash dato
 * Sort and reorder
 sort id
 order _all, alpha
-order id pat_* ef_* itv* pet_*
+order id excl pat_* ef_* itv* pet_*
 
 * Save
 save Data/cohort_wexcl.dta, replace
@@ -203,13 +217,20 @@ putdocx paragraph
 count
 putdocx text ("`r(N)' patients in Viabdyn dataset"), linebreak
 
-drop if itv==0
+drop if itv==0 & mi(excl)
 putdocx text ("`r(N_drop)' excluded as they did not undergo an intervention"), linebreak
 drop itv 
 
-drop if mi(ef_pre) | mi(ef_post)
-putdocx text ("`r(N_drop)' excluded as pre or post echo-EF was missing"), linebreak
-
+count if !mi(excl)
+putdocx text ("`r(N)' who underwent an intervention were excluded due to:"), linebreak
+qui: levelsof excl
+foreach grp in `r(levels)' {
+    local label : label (excl) `grp'
+	di "`label'"
+	drop if excl==`grp'
+	putdocx text ("- `r(N_drop)' `label'"), linebreak
+}
+drop excl 
 count
 putdocx text ("Final cohort was `r(N)' patients")
 
