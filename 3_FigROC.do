@@ -24,7 +24,7 @@ foreach expvar of global expvars {
 	local graphs_prim = "`graphs_prim' Prim_`expvar'"
 	
 	** Secondary
-	qui: roctab ef_prim `expvar' , graph name("Sec_`expvar'", replace) title(`title')
+	qui: roctab ef_sec `expvar' , graph name("Sec_`expvar'", replace) title(`title')
 	qui: graph export "Output/Roc/ROC_Sec_`expvar'${exportformat}" $exportoptions
 	
 	local graphs_sec = "`graphs_sec' Sec_`expvar'"
