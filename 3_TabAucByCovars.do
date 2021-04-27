@@ -74,6 +74,7 @@ addtab_header, varname("itv_cat==4") rowname("- Multiple areas")
 
 ** Modify headers in table
 frame table: drop col_*
+frame table: gen no = "N EF improved_P/N total" if _n==1
 foreach expvar of global expvars {
 	local label : var label `expvar'
 	local label = subinstr("`label'", ";", "_p", 1)
@@ -86,6 +87,15 @@ local format = `", 0.01), "%4.2f" "'
 
 foreach row in "!mi(id)" "pat_sex==1" "pat_sex==0" "pat_dm==1" "pat_dm==0" "ef_pre_median==0" "ef_pre_median==1" "itv_cat==1" "itv_cat==2" "itv_cat==3" "itv_cat==4" {
 	di "`row'"
+	* N
+	qui: count if `row' & ef_prim==1
+	local n_improv = `r(N)'
+	qui: count if `row' 
+	local n_total = `r(N)'
+	di "`n_improv'/`n_total'"
+	qui frame table: replace no = "`n_improv'/`n_total'" if varname=="`row'"
+	
+	* AUC
 	foreach expvar of global expvars {
 		qui: roctab ef_prim `expvar' if `row'
 		local result = string(round(`r(area)' `format') ///
