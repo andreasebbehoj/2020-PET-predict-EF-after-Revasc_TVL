@@ -31,6 +31,11 @@ replace ef_post = . if !mi(excl)
 
 
 *** Define patients vars
+* Intervention (inclu or excluded)
+label var itv "Intervention"
+label define itv_ 0 "No intervention" 1 "Intervention"
+label value itv itv_
+
 * Age
 rename alder pat_age
 label var pat_age "Age in years"

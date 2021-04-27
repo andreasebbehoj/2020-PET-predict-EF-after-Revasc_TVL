@@ -1,11 +1,10 @@
 ***** 3_TabPatCharExcl.do *****
 frame reset
 use Data/cohort_wexcl.dta, clear
-label define ef_prim_ 1 "EF improved 5% or more" 0 "EF not improved" 2 "No intervention", modify
-recode ef_prim (.=2) if itv==0
+
 
 *** Generate table
-addtab_setup, frame(table) columnvar(ef_prim)
+addtab_setup, frame(table) columnvar(itv)
 
 * N patients
 addtab_no, var(id) rowname("Patients, N") 
@@ -66,7 +65,7 @@ addtab_estimate, est(p50) par(iqr) var(pet_mgu_aoi) rowname("- Area of intervent
 
 
 ** Replace missing values for no intervention
-frame table: replace col_2 = "-" if ///
+frame table: replace col_0 = "-" if ///
 			strpos(varname, "_aoi") /// No area of intervention PET vars
 			| inlist(varname, "itv_cat", "itvtype", "ef_post")
 
