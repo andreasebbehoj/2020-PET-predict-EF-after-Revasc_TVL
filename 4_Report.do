@@ -88,6 +88,7 @@ frame abbrev {
 	"CABG"	"coronary artery bypass grafting"
 	"CTO" 	"chronic total occlusion"
 	"EF"	"ejection fraction"
+	"FDG_PET/CT"	"18F-fluorodeoxyglucose positron emission tomography/computed tomography"
 	"HEC" 	"hyperinsulinemic euglycemic clamp"
 	"IQR"	"inter-quartile range (25th to 75th percentile)"
 	"LAD"	"left anterior descendent artery"
@@ -124,7 +125,8 @@ if !mi(`"`abbreviations'"') {
 			    local meaning = meaning[`r(min)']
 			}	
 		}
-		local abbrevtext = "`abbrevtext'`abbrev', `meaning'; "
+		local abbrev2 = subinstr("`abbrev'", "_", " ", .)
+		local abbrevtext = "`abbrevtext'`abbrev2', `meaning'; "
 	}
 	
 	* Remove last ; and add .
@@ -188,8 +190,8 @@ text_footnote, ///
 text_heading1, text("Tables") sectionbreak
 
 * Tab 1
-text_heading2, text("Table 1 - Patient characteristics, PET measurements, and cardiac status by diabetes status")
-text_table, file("Output/TabPatCharByDM.dta") vars(rowname col_total col_0 col_1) ///
+text_heading2, text("Table 1 - Patient characteristics by EF improvement after intervention")
+text_table, file("Output/TabPatCharByEF.dta") vars(rowname col_total col_0 col_1) ///
 	header(1) left(1) ///
 	subheader(`"if varname=="BOLD""')
 text_footnote, notes("Some explanation. ") ///
@@ -197,8 +199,8 @@ text_footnote, notes("Some explanation. ") ///
 	abbrev("CABG CTO HEC IQR LAD LCx PCI RCA SD")
 
 * Tab 2
-text_heading2, text("Table 2 - AUC (95% CI) of PET Measurements by Patient Characteristics") sectionbreak landscape
-text_table, file("Output/TabAucByCovars.dta") vars(rowname $expvars) ///
+text_heading2, text("Table 2 - AUC (95%CI) of PET measures stratified by patient characteristics") sectionbreak landscape
+text_table, file("Output/TabAucByCovars.dta") vars(rowname no $expvars) ///
 	header(1) left(1) ///
 	subheader(`"if varname=="BOLD""')
 text_footnote, notes("ROC AUC for PET measurement predicting a 5% EF improvement after intervention. ") ///
@@ -210,22 +212,16 @@ text_footnote, notes("ROC AUC for PET measurement predicting a 5% EF improvement
 text_heading1, text("Supplementary") sectionbreak
 
 * Sup 1
-text_heading2, text("Supplementary 1 - Patient characteristics, PET measurements, and cardiac status by EF improvement after intervention")
-text_table, file("Output/TabPatCharByEF.dta") vars(rowname col_total col_0 col_1) ///
-	header(1) left(1) ///
-	subheader(`"if varname=="BOLD""')
-text_footnote, notes("Some explanation. ") ///
-	linebreak ///
-	abbrev("CABG CTO HEC PCI SD")
+text_heading2, text("Supplementary 1 - Patient flow chart") 
+text_fig, image(Input/FlowFig.png) height(5)
+text_footnote, abbrev("FDG_PET/CT") 
 
 * Sup 2
-text_heading2, text("Supplementary 2 - Patient characteristics, PET measurements, and cardiac status by intervention versus no intervention") sectionbreak
-text_table, file("Output/TabPatCharExcl.dta") vars(rowname col_total col_0 col_1 col_2) ///
+text_heading2, text("Supplementary 2 - Patient characteristics for included patients who underwent cardiac intervention and excluded patients who did not") sectionbreak
+text_table, file("Output/TabPatCharExcl.dta") vars(rowname col_1 col_0) ///
 	header(1) left(1) ///
 	subheader(`"if varname=="BOLD""')
-text_footnote, notes("Some explanation. ") ///
-	linebreak ///
-	abbrev("CABG CTO HEC PCI SD")
+text_footnote, abbrev("CABG CTO HEC IQR LAD LCx PCI RCA SD")
 
 * Sup 3
 text_heading2, text("Supplementary 3 - Areas of intervention compared to areas of hibernation") sectionbreak
@@ -236,7 +232,16 @@ text_footnote, notes("Table includes both patients who underwent an intervention
 	linebreak ///
 	abbrev("LAD LCx RCA")
 
+* Sup 4
+text_heading2, text("Supplementary 4 - Patient characteristics by diabetes status") sectionbreak
+text_table, file("Output/TabPatCharByDM.dta") vars(rowname col_total col_0 col_1) ///
+	header(1) left(1) ///
+	subheader(`"if varname=="BOLD""')
+text_footnote, notes("Some explanation. ") ///
+	linebreak ///
+	abbrev("CABG CTO HEC IQR LAD LCx PCI RCA SD")
 /* Confirm with TVL/ES/LG: order of tables and supplementary?*/
+
 
 ** Abbreviations
 text_heading1, text("Abbreviations") sectionbreak
