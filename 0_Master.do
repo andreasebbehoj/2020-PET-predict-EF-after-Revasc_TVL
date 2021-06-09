@@ -65,6 +65,10 @@ do 3_FigROC.do
 ** AoI and area of hibernation
 do 3_TabAoiAndHiber.do
 
+** Miscellaneous
+do 3_TextMisc.do
+
+
 ***** 4) REPORT
 /*
 This section:
