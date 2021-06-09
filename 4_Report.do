@@ -161,11 +161,26 @@ putdocx text (" of ")
 putdocx pagenumber, totalpages bold
 
 
+** Abbreviations
+text_heading1, text("Abbreviations") 
+text_table, file("Output/Abbreviations.dta") vars(abbrev meaning) header(1) left(1 2)
+
+
 ** Figures
-text_heading1, text("Figures") 
+text_heading1, text("Figures") sectionbreak
 
 * Fig 1
-text_heading2, text("Figure 1 - ROC for predicting EF-improvement of 5% or above")
+text_heading2, text("Figure 1 - Patient flow chart") 
+text_fig, image(Input/FlowFig.png) height(5)
+text_footnote, abbrev("FDG_PET/CT") 
+
+* Fig 2
+text_heading2, text("Figure 2 - Example of a dynamic cardiac PET scan") 
+text_fig, image(Input/placeholder.png) height(5)
+text_footnote, notes("Insert footnotes.")
+
+* Fig 3
+text_heading2, text("Figure 3 - ROC for predicting EF-improvement of 5% or above")
 text_fig, image(Output/ROC_Prim_Combined.png) width(7.5 in)
 text_footnote, ///
 	abbrev("EF HEC MGU ROC") ///
@@ -174,78 +189,73 @@ text_footnote, ///
 	"# Coronary flow reserve in area of intervention is average CFR across the area(s) of intervention. " ///
 	"§ Myocardial glucose uptake during hyperinsulinemic euglycemic clamp in area of intervention is average MGU across area(s) of intervention") 
 
-* Fig 2
-text_heading2, text("Figure 2 - ROC for predicting EF-improvement of 10% or above") sectionbreak
-text_fig, image(Output/ROC_Sec_Combined.png) width(7.5 in)
-text_footnote, ///
-	abbrev("EF HEC MGU ROC") ///
-	linebreak ///
-	notes("* Hibernating tissue in area of intervention is total number of subareas with at least 10% hibernating tissue divided by area(s) of intervention. LAD has 7 subareas, LCx has 5, and RCA has 5. " ///
-	"# Coronary flow reserve in area of intervention is average CFR across the area(s) of intervention. " ///
-	"§ Myocardial glucose uptake during hyperinsulinemic euglycemic clamp in area of intervention is average MGU across area(s) of intervention") 
-
+* Fig 4
+text_heading2, text("Figure 4 - Hibernating tissue and survival") 
+text_fig, image(Input/placeholder.png) height(5)
+text_footnote, notes("Kaplan-Meier curves showing survival by the presence or absence of hibernating tissue in patients who underwent intervention (left) or all patients including those who did not undergo intervention (right). Follow-up started at date of intervention in the left figure and date of PET scan in the right figure. Number of patients at risk are shown below each figure. ")
 
 
 ** Tables
 text_heading1, text("Tables") sectionbreak
 
 * Tab 1
-text_heading2, text("Table 1 - Patient characteristics by EF improvement after intervention")
-text_table, file("Output/TabPatCharByEF.dta") vars(rowname col_total col_0 col_1) ///
+text_heading2, text("Table 1 - Baseline characteristics for patients undergoing intervention")
+text_table, file("Output/TabPatCharByEF.dta") vars(rowname col_total) ///
 	header(1) left(1) ///
 	subheader(`"if varname=="BOLD""')
-text_footnote, notes("Some explanation. ") ///
+text_footnote, ///
 	linebreak ///
 	abbrev("CABG CTO HEC IQR LAD LCx PCI RCA SD")
 
 * Tab 2
-text_heading2, text("Table 2 - AUC (95%CI) of PET measures stratified by patient characteristics") sectionbreak landscape
-text_table, file("Output/TabAucByCovars.dta") vars(rowname no $expvars) ///
+text_heading2, text("Table 2 - Characteristics for patients with and without EF-improvement after intervention") sectionbreak
+text_table, file("Output/TabPatCharByEF.dta") vars(rowname col_0 col_1) ///
 	header(1) left(1) ///
 	subheader(`"if varname=="BOLD""')
-text_footnote, notes("ROC AUC for PET measurement predicting a 5% EF improvement after intervention. ") ///
+text_footnote, ///
 	linebreak ///
-	abbrev("AUC EF HEC LAD LCx MGU RCA") 
+	abbrev("CABG CTO HEC IQR LAD LCx PCI RCA SD")
+	
+
+** Save
+putdocx save "Output/FigTabCombined", replace
 
 
-** Supplementary
-text_heading1, text("Supplementary") sectionbreak
+
+*** Export supplementary
+** Setup document
+global pagelayout = `"pagenum(decimal)"' /// 
+	+ `" footer(pfooter)"' ///
+	+ `" pagesize(A4)"' ///
+	+ `" margin(left, 1 in)"' ///
+	+ `" margin(right, 1 in)"' //
+
+putdocx begin, $pagelayout
+	
+putdocx paragraph, tofooter(pfooter)
+putdocx text ("Page ")
+putdocx pagenumber, bold
+putdocx text (" of ")
+putdocx pagenumber, totalpages bold
+
+text_heading1, text("Supplementary")
+
 
 * Sup 1
-text_heading2, text("Supplementary 1 - Patient flow chart") 
-text_fig, image(Input/FlowFig.png) height(5)
-text_footnote, abbrev("FDG_PET/CT") 
-
-* Sup 2
-text_heading2, text("Supplementary 2 - Patient characteristics for included patients who underwent cardiac intervention and excluded patients who did not") sectionbreak
+text_heading2, text("Supplementary 1 - Patient characteristics for included patients who underwent cardiac intervention and excluded patients who did not")
 text_table, file("Output/TabPatCharExcl.dta") vars(rowname col_1 col_0) ///
 	header(1) left(1) ///
 	subheader(`"if varname=="BOLD""')
 text_footnote, abbrev("CABG CTO HEC IQR LAD LCx PCI RCA SD")
 
-* Sup 3
-text_heading2, text("Supplementary 3 - Areas of intervention compared to areas of hibernation") sectionbreak
+* Sup 2
+text_heading2, text("Supplementary 2 - Areas of intervention compared to areas of hibernation") sectionbreak
 text_table, file("Output/TabAoiAndHiber.dta") vars(rowname LAD-None) ///
 	header(1 2) left(1) //
 putdocx table tbl1(1, 2), colspan(9)
-text_footnote, notes("Table includes both patients who underwent an intervention and those who did not (i.e. intervention 'None'). ") ///
+text_footnote, notes("Table includes both patients who underwent an intervention and those who did not (i.e. intervention 'None'). Dark grey indicate complete agreement between hibernating areas on PET scan and areas of intervention, light grey indicate partial agreement, and white indicate no agreement. ") ///
 	linebreak ///
 	abbrev("LAD LCx RCA")
 
-* Sup 4
-text_heading2, text("Supplementary 4 - Patient characteristics by diabetes status") sectionbreak
-text_table, file("Output/TabPatCharByDM.dta") vars(rowname col_total col_0 col_1) ///
-	header(1) left(1) ///
-	subheader(`"if varname=="BOLD""')
-text_footnote, notes("Some explanation. ") ///
-	linebreak ///
-	abbrev("CABG CTO HEC IQR LAD LCx PCI RCA SD")
-/* Confirm with TVL/ES/LG: order of tables and supplementary?*/
-
-
-** Abbreviations
-text_heading1, text("Abbreviations") sectionbreak
-text_table, file("Output/Abbreviations.dta") vars(abbrev meaning) header(1) left(1 2)
-
 ** Save
-putdocx save "Output/FigTabCombined", replace
+putdocx save "Output/Supplementary", replace
