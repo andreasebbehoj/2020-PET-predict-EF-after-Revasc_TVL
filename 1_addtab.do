@@ -48,6 +48,7 @@ frame $addtab_frame {
 		qui: gen col_`cat' = "${addtab_vallab_`cat'}" if _n==1
 		label var col_`cat' "${addtab_vallab_`cat'}"
 	}
+	qui: gen col_pval = "P-value" if _n==1
 }
 
 end
@@ -187,6 +188,37 @@ foreach cat of global addtab_columncats {
 	di _col(3) "${addtab_vallab_`cat'}" _col(25) "`result'" _col(40) "`n'/`total'"
 	
 	qui frame $addtab_frame: replace col_`cat' = "`result'" if _n==_N
+}
+
+end
+
+*** P-values
+capture: program drop addtab_pval
+program define addtab_pval
+syntax, varname(varname) ptest(string) returnval(string)
+* Calculate p-value
+`ptest'
+local pval = `returnval'
+
+* Format p-val
+if `pval'>0.99 {
+	local pvalstring = ">0.99"
+}
+if inrange(`pval', 0.05, 0.99) {
+	local pvalstring = string(round(`pval', 0.01), "%4.2f")
+}
+if `pval'>=0.001 & `pval'<0.05 {
+	local pvalstring = string(round(`pval', 0.001), "%4.3f")
+}
+if `pval'<0.001 {
+	local pvalstring = "<0.001"
+}
+di "`pvalstring'"
+
+* Add to table
+frame table {
+	qui: replace col_pval = "`pvalstring'" ///
+		if varname=="`varname'" & varname[_n-1]!="`varname'" // Only first occurence of varname
 }
 
 end

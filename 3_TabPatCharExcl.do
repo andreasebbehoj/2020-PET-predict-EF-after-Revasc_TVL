@@ -69,6 +69,22 @@ frame table: replace col_0 = "-" if ///
 			strpos(varname, "_aoi") /// No area of intervention PET vars
 			| inlist(varname, "itv_cat", "itvtype", "ef_post")
 
+** P-values
+* Exact t-test
+foreach var in pat_sex pat_dm {
+	addtab_pval, varname(`var') ptest(tab `var' itv, exact) returnval(r(p_exact))
+}
+
+* T-test
+foreach var in pat_age ef_pre {
+	addtab_pval, varname(`var') ptest("ttest `var', by(itv)") returnval(r(p))
+}
+
+* Ranksum test
+foreach var in pat_bmi pat_meanbs pat_meangir pet_scar pet_hiber_overall pet_cfr_overall pet_mgu_overall pet_mgu_remote {
+	addtab_pval, varname(`var') ptest("ranksum `var', by(itv) exact") returnval(r(p_exact))
+}
+
 ** Export table
 frame table: save Output/TabPatCharExcl.dta, replace
 

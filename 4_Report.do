@@ -209,10 +209,11 @@ text_footnote, ///
 
 * Tab 2
 text_heading2, text("Table 2 - Characteristics for patients with and without EF-improvement after intervention") sectionbreak
-text_table, file("Output/TabPatCharByEF.dta") vars(rowname col_0 col_1) ///
+text_table, file("Output/TabPatCharByEF.dta") vars(rowname col_0 col_1 col_pval) ///
 	header(1) left(1) ///
 	subheader(`"if varname=="BOLD""')
 text_footnote, ///
+	notes("P-values for differences were calculated using Fischer's exact test (sex, diabetes, type of intervention, and area of intervention), Student's t-test (age and ejection-fraction), and Wilcoxon rank-sum test (remaining variables).")
 	linebreak ///
 	abbrev("CABG CTO HEC IQR LAD LCx PCI RCA SD")
 	
@@ -243,7 +244,7 @@ text_heading1, text("Supplementary")
 
 * Sup 1
 text_heading2, text("Supplementary 1 - Patient characteristics for included patients who underwent cardiac intervention and excluded patients who did not")
-text_table, file("Output/TabPatCharExcl.dta") vars(rowname col_1 col_0) ///
+text_table, file("Output/TabPatCharExcl.dta") vars(rowname col_1 col_0 col_pval) ///
 	header(1) left(1) ///
 	subheader(`"if varname=="BOLD""')
 text_footnote, abbrev("CABG CTO HEC IQR LAD LCx PCI RCA SD")

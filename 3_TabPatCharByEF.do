@@ -63,6 +63,21 @@ addtab_estimate, est(p50) par(iqr) var(pet_mgu_overall) rowname("- Overall")
 addtab_estimate, est(p50) par(iqr) var(pet_mgu_remote) rowname("- Remote area")
 addtab_estimate, est(p50) par(iqr) var(pet_mgu_aoi) rowname("- Area of intervention")
 
+** P-values
+* Exact t-test
+foreach var in pat_sex pat_dm itvtype itv_cat {
+	addtab_pval, varname(`var') ptest(tab `var' ef_prim, exact) returnval(r(p_exact))
+}
+
+* T-test
+foreach var in pat_age ef_pre ef_post {
+	addtab_pval, varname(`var') ptest("ttest `var', by(ef_prim)") returnval(r(p))
+}
+
+* Ranksum test
+foreach var in pat_bmi pat_meanbs pat_meangir pet_scar pet_hiber_overall pet_hiber_aoi pet_cfr_overall pet_cfr_aoi pet_mgu_overall pet_mgu_aoi pet_mgu_remote {
+	addtab_pval, varname(`var') ptest("ranksum `var', by(ef_prim) exact") returnval(r(p_exact))
+}
 
 frame table: save Output/TabPatCharByEF.dta, replace
 
