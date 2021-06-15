@@ -260,3 +260,13 @@ text_footnote, notes("Table includes both patients who underwent an intervention
 
 ** Save
 putdocx save "Output/Supplementary", replace
+
+
+*** Export miscellaneous calculations
+local filelist : dir "Output" files "Text*"
+local filesdir = ""
+foreach file of local filelist {
+	local filesdir = "`filesdir' Output/`file'"
+}
+di "`filesdir'"
+putdocx append `filesdir', saving(Output/MiscellaneousCombined.docx, replace)
