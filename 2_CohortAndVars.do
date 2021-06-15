@@ -15,6 +15,19 @@ format %d dato skanningsdato datodød censurdato
 rename preekkoef ef_pre
 rename postekkoef ef_post
 
+*** Correct errors
+* Date problem due to Excel conversion
+gen diff = skanningsdato - dato // should have been the same date (diff=0)
+su diff // diff=21916
+replace skanningsdato=skanningsdato-21916
+replace censurdato=censurdato-21916
+replace datodød=datodød-21916
+
+rename skanningsdato date_scan
+rename censurdato date_cens
+rename datodød date_death
+rename failure death
+drop diff failuredate entrydate exitdate hændelse1 hændelse2 indlæggelse1 indlæggelse2 outcomedød
 
 *** Exclude special cases
 gen excl = 1 if inlist(id, 106) // One patient with failed intervention
@@ -29,6 +42,17 @@ foreach var in lad lcx rca {
 }
 replace ef_post = . if !mi(excl)
 
+
+*** Dates in string
+* Date of intervention
+order behdato
+gen datepos = strpos(behdato, "/") if itv==1, after(behdato)
+gen datestring = substr(behdato, datepos-2, 10) if datepos==3, after(behdato) // DD/MM/YYYY
+replace datestring = subinstr(substr(behdato, 1, 10), ".", "/", 2) if datepos==0 // DD.MM.YYYY
+replace datestring = "0" + substr(behdato, 1, 2) + "0" + substr(behdato, 3, 6) if datepos==2 // D/M/YYYY
+gen date_itv = date(datestring, "DMY"), after(behdato)
+format %d date_itv 
+drop datestring datepos
 
 *** Define patients vars
 * Intervention (inclu or excluded)
@@ -203,7 +227,7 @@ drop navn cpr nodash dato
 * Sort and reorder
 sort id
 order _all, alpha
-order id excl pat_* ef_* itv* pet_*
+order id excl pat_* ef_* itv* pet_* date_* death
 
 * Save
 save Data/cohort_wexcl.dta, replace

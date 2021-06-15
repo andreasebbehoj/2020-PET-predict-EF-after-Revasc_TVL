@@ -191,7 +191,7 @@ text_footnote, ///
 
 * Fig 4
 text_heading2, text("Figure 4 - Hibernating tissue and survival") 
-text_fig, image(Input/placeholder.png) height(5)
+text_fig, image(Output/SurvByHiber_Comb.png)
 text_footnote, notes("Kaplan-Meier curves showing survival by the presence or absence of hibernating tissue in patients who underwent intervention (left) or all patients including those who did not undergo intervention (right). Follow-up started at date of intervention in the left figure and date of PET scan in the right figure. Number of patients at risk are shown below each figure. ")
 
 
