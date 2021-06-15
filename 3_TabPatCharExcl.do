@@ -18,8 +18,8 @@ addtab_no if pat_sex==1, colpercent var(pat_sex) rowname("- Male")
 addtab_no if pat_sex==0, colpercent var(pat_sex) rowname("- Female")
 
 addtab_header, varname(GROUPHEADER) rowname("Diabetes status, n (%)")
-addtab_no if pat_dm==1, colpercent var(pat_sex) rowname("- Diabetics")
-addtab_no if pat_dm==0, colpercent var(pat_sex) rowname("- Non-diabetics")
+addtab_no if pat_dm==1, colpercent var(pat_dm) rowname("- Diabetics")
+addtab_no if pat_dm==0, colpercent var(pat_dm) rowname("- Non-diabetics")
 
 addtab_estimate, est(p50) par(iqr) var(pat_bmi) rowname("BMI in kg/m2, median (IQR)")
 addtab_estimate, est(p50) par(iqr) var(pat_meanbs) rowname("P-glucose during HEC in mM, median (IQR)")
