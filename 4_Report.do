@@ -213,7 +213,7 @@ text_table, file("Output/TabPatCharByEF.dta") vars(rowname col_0 col_1 col_pval)
 	header(1) left(1) ///
 	subheader(`"if varname=="BOLD""')
 text_footnote, ///
-	notes("P-values for differences were calculated using Fischer's exact test (sex, diabetes, type of intervention, and area of intervention), Student's t-test (age and ejection-fraction), and Wilcoxon rank-sum test (remaining variables).")
+	notes("P-values for differences were calculated using Fischer's exact test (sex, diabetes, type of intervention, and area of intervention), Student's t-test (age and ejection-fraction), and Wilcoxon rank-sum test (remaining variables).") ///
 	linebreak ///
 	abbrev("CABG CTO HEC IQR LAD LCx PCI RCA SD")
 	
