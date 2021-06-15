@@ -32,7 +32,20 @@ foreach expvar of global expvars {
 
 di "`graphs_prim'" _n(2) "`graphs_sec'"
 
-graph combine `graphs_prim', col(3) name(comb_prim, replace) altshrink
-graph export "Output/ROC_Prim_Combined${exportformat}" $exportoptions
-graph combine `graphs_sec', col(3) name(comb_sec, replace) altshrink
-graph export "Output/ROC_Sec_Combined${exportformat}" $exportoptions
+*** Combine primary 
+twoway (), name(empty, replace)
+
+foreach outcome in Prim Sec {
+	* Row 1-3
+	local Graphs_Dynamic	= subinstr("pet_mgu_overall pet_mgu_aoi pet_mgu_remote", "pet_", "`outcome'_pet_", .)
+	local Graphs_Static 	= subinstr("pet_hiber_overall pet_hiber_aoi pet_scar", "pet_", "`outcome'_pet_", .)
+	local Graphs_Perfusion	= subinstr("pet_cfr_overall pet_cfr_aoi empty", "pet_", "`outcome'_pet_", .)
+	
+	foreach cat in Dynamic Static Perfusion {
+		graph combine `Graphs_`cat'' ///
+			, row(1) l1title("`cat'") name(`cat', replace)
+	}
+	
+	graph combine Dynamic Static Perfusion, col(1) altshrink 
+	graph export "Output/ROC_`outcome'_Combined${exportformat}" $exportoptions
+}
