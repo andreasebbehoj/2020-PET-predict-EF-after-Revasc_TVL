@@ -204,6 +204,13 @@ The development of the Stata code is documented in GitHub's "commits" section, a
     - Added new table showing baseline differences for patients excluded due to no intervention.
     - Added new table showing agreement between areas with hibernating tissue and areas of intervention.
     - MGU in hibernating area changed to MGU in area of intervention due to discongruence between AoI and hibernating area.
+- 2.1 After discussion between TVL and LG, the following changes were decided:
+    - Change table order: Moved table with PatChar by EF improvement from supplementary to manuscript
+    - Removed table with secondary outcome (EF improvement >10%), AUC by patient characteristics, and PatChar by DM status as they did not add anything to the analysis.
+    - Added survival analysis by PET hibernation
+    - Added explanatory figures to manuscript: patient flow figure + example of cardiac PET scan
+
+
 
 ### Changes after submission
 ...
