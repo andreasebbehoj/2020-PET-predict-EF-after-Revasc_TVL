@@ -27,6 +27,9 @@ tab hiber_simple itv, mi
 
 
 *** Survival in ITV group
+putdocx paragraph, style(Heading2)
+putdocx text ("Intervention group only")
+
 stset date_event if itv==1 ///
 	, origin(time date_itv) ///
 	failure(death==1) scale(365.25)
@@ -46,20 +49,23 @@ sts graph, by(hiber_simple) ///
 graph export "Output/SurvByHiber_ITV${exportformat}" $exportoptions
 
 * Cox
+stphplot, by(hiber_simple) name(logminuslog_itv, replace) title(Intervention patients only)
 stcox ib0.hiber_simple, `format'
-
-putdocx paragraph, style(Heading2)
-putdocx text ("Intervention group only")
 putdocx table tbl1=etable
 
-stphplot, by(hiber_simple) name(logminuslog_itv, replace) title(Intervention patients only)
+* Log rank
+sts test hiber_simple, logrank
 
 
 *** Survival in all patients
+putdocx paragraph, style(Heading2)
+putdocx text ("All patients, including those without intervention")
+
 stset date_event ///
 	, origin(time date_scan) ///
 	failure(death==1) scale(365.25)
 
+* Graph
 sts graph, by(hiber_simple) ///
 	legend(pos(6) ring(0)) ///
 	title("Figure B" "All patients") ///
@@ -74,13 +80,13 @@ sts graph, by(hiber_simple) ///
 graph export "Output/SurvByHiber_All${exportformat}" $exportoptions
 
 * Cox
+stphplot, by(hiber_simple) name(logminuslog_all, replace) title(All patients)
 stcox ib0.hiber_simple, `format'
-
-putdocx paragraph, style(Heading2)
-putdocx text ("All patients, including those without intervention")
 putdocx table tbl1=etable
 
-stphplot, by(hiber_simple) name(logminuslog_all, replace) title(All patients)
+* Log rank
+sts test hiber_simple, logrank
+
 
 *** Export results
 * KM plots
