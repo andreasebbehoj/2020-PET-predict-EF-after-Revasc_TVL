@@ -2,8 +2,6 @@
 use Data/cohort.dta, clear
 capture: mkdir Output/Roc
 
-local roclayout = `"title(`title', size(3))"'
-
 foreach expvar of global expvars {
     local label : var label `expvar'
 	
@@ -19,13 +17,13 @@ foreach expvar of global expvars {
 	di `"`expvar' - `label' / `title' "'
 
 	** Primary
-	qui: roctab ef_prim `expvar' , graph name("Prim_`expvar'", replace) `roclayout'
+	qui: roctab ef_prim `expvar' , graph name("Prim_`expvar'", replace) title(`title', size(3))
 	qui: graph export "Output/Roc/ROC_Prim_`expvar'${exportformat}" $exportoptions
 	
 	local graphs_prim = "`graphs_prim' Prim_`expvar'"
 	
 	** Secondary
-	qui: roctab ef_sec `expvar' , graph name("Sec_`expvar'", replace) `roclayout'
+	qui: roctab ef_sec `expvar' , graph name("Sec_`expvar'", replace) title(`title', size(3))
 	qui: graph export "Output/Roc/ROC_Sec_`expvar'${exportformat}" $exportoptions
 	
 	local graphs_sec = "`graphs_sec' Sec_`expvar'"
