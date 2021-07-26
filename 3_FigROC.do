@@ -2,6 +2,8 @@
 use Data/cohort.dta, clear
 capture: mkdir Output/Roc
 
+global rocopts = "title(`title', size(3) alignment(top))"
+
 foreach expvar of global expvars {
     local label : var label `expvar'
 	
@@ -17,13 +19,13 @@ foreach expvar of global expvars {
 	di `"`expvar' - `label' / `title' "'
 
 	** Primary
-	qui: roctab ef_prim `expvar' , graph name("Prim_`expvar'", replace) title(`title', size(3))
+	qui: roctab ef_prim `expvar' , graph name("Prim_`expvar'", replace) $rocopts
 	qui: graph export "Output/Roc/ROC_Prim_`expvar'${exportformat}" $exportoptions
 	
 	local graphs_prim = "`graphs_prim' Prim_`expvar'"
 	
 	** Secondary
-	qui: roctab ef_sec `expvar' , graph name("Sec_`expvar'", replace) title(`title', size(3))
+	qui: roctab ef_sec `expvar' , graph name("Sec_`expvar'", replace) $rocopts
 	qui: graph export "Output/Roc/ROC_Sec_`expvar'${exportformat}" $exportoptions
 	
 	local graphs_sec = "`graphs_sec' Sec_`expvar'"
@@ -42,7 +44,7 @@ foreach outcome in Prim Sec {
 	
 	foreach cat in Dynamic Static Perfusion {
 		graph combine `Graphs_`cat'' ///
-			, row(1) l1title("`cat'") name(`cat', replace)
+			, row(1) l1title("`cat'") name(`cat', replace) 
 	}
 	
 	graph combine Dynamic Static Perfusion, col(1) iscale(0.6)

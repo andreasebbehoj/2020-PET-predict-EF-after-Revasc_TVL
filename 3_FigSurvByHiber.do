@@ -38,6 +38,7 @@ stset date_event if itv==1 ///
 sts graph, by(hiber_simple) ///
 	legend(pos(6) ring(0)) ///
 	title("Figure A" "Intervention group") ///
+	ytitle("Survival") ///
 	xtitle("Years after intervention") ///
 	tmax(5) ///
 	legend(order(1 "`label1'" 2 "`label2'")) ///
@@ -69,6 +70,7 @@ stset date_event ///
 sts graph, by(hiber_simple) ///
 	legend(pos(6) ring(0)) ///
 	title("Figure B" "All patients") ///
+	ytitle("Survival") ///
 	xtitle("Years after PET scan") ///
 	tmax(5) ///
 	legend(order(1 "`label1'" 2 "`label2'")) ///
