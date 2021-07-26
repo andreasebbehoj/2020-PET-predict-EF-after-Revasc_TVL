@@ -1,4 +1,4 @@
-//log using "Logs/`c(current_date)'", replace text
+log using "Logs/`c(current_date)'", replace text
 
 ***** 0_Master.do *****
 /*
