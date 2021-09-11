@@ -2,8 +2,6 @@
 use Data/cohort.dta, clear
 capture: mkdir Output/Roc
 
-global rocopts = "title(`title', size(3) alignment(top))"
-
 foreach expvar of global expvars {
     local label : var label `expvar'
 	
@@ -17,7 +15,8 @@ foreach expvar of global expvars {
 	}
 	
 	di `"`expvar' - `label' / `title' "'
-
+	global rocopts = `"title(`title', size(3) alignment(top))"'
+	
 	** Primary
 	qui: roctab ef_prim `expvar' , graph name("Prim_`expvar'", replace) $rocopts
 	qui: graph export "Output/Roc/ROC_Prim_`expvar'${exportformat}" $exportoptions
