@@ -14,11 +14,9 @@ capture: mkdir Logs
 
 
 *** Install necessary packages
-/*
 ssc install grstyle, replace
 ssc install palettes, replace
 ssc install colrspace, replace
-*/
 
 
 *** Define custom programs
@@ -46,14 +44,14 @@ foreach x of local levels {
 		di _col(5) "from `x' to `xnew'" _col(20)  "`xlabel'  (`r(N)' changes made)"
 		label define `lblname' `x' "", modify // remove old label
 		label define `lblname' `xnew' "`xlabel'", modify // and new label
-		
+
 	}
 	local xnew = `xnew'+1
 }
 end
 
 ** Add new row/obs to dataset (current or frame)
-capture: program drop newrow 
+capture: program drop newrow
 program define newrow
 	syntax , [frame(string)]
 	* Current dataset (default)

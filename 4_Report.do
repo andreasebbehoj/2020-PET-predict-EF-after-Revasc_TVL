@@ -225,7 +225,7 @@ text_footnote, ///
 	
 
 ** Save
-putdocx save "Output/FigTabCombined", replace
+putdocx save "Output/Report_FigTab", replace
 
 
 
@@ -245,7 +245,7 @@ putdocx pagenumber, bold
 putdocx text (" of ")
 putdocx pagenumber, totalpages bold
 
-text_heading1, text("Supplementary")
+text_heading1, text("Report_Supplementary")
 
 
 * Sup 1
@@ -278,4 +278,4 @@ foreach file of local filelist {
 	local filesdir = "`filesdir' Output/`file'"
 }
 di "`filesdir'"
-putdocx append `filesdir', saving(Output/MiscellaneousCombined.docx, replace)
+putdocx append`filesdir', saving(Output/Report_MiscForText.docx, replace)
