@@ -88,7 +88,7 @@ frame abbrev {
 	"CABG"	"coronary artery bypass grafting"
 	"CTO" 	"chronic total occlusion"
 	"EF"	"ejection fraction"
-	"FDG_PET/CT"	"18F-fluorodeoxyglucose positron emission tomography/computed tomography"
+	"FDG PET/CT"	"18F-fluorodeoxyglucose positron emission tomography/computed tomography"
 	"HEC" 	"hyperinsulinemic euglycemic clamp"
 	"IQR"	"inter-quartile range (25th to 75th percentile)"
 	"LAD"	"left anterior descendent artery"
@@ -100,6 +100,7 @@ frame abbrev {
 	"SD"	"standard deviation"
 	end
 	save Output/Abbreviations.dta, replace
+	replace abbrev = subinstr(abbrev, " ", "_", .)
 	gen n=_n
 }
 
@@ -170,9 +171,11 @@ text_table, file("Output/Abbreviations.dta") vars(abbrev meaning) header(1) left
 text_heading1, text("Figures") sectionbreak
 
 * Fig 1
-text_heading2, text("Figure 1 - Patient flow chart") 
+text_heading2, text("Figure 1 - Patient flow diagram") 
 text_fig, image(Input/FlowFig.png) height(5)
-text_footnote, abbrev("FDG_PET/CT") 
+text_footnote, abbrev("FDG_PET/CT") ///
+	linebreak ///
+	notes("Flow diagram showing the inclusion of patients from the 131 who were referred to the Department of Nuclear Medicine & PET-Centre to undergo cardiac viability PET/CT.")
 
 * Fig 2
 text_heading2, text("Figure 2 - Example of a dynamic cardiac PET scan") 
@@ -180,40 +183,43 @@ text_fig, image(Input/placeholder.png) height(5)
 text_footnote, notes("Insert footnotes.")
 
 * Fig 3
-text_heading2, text("Figure 3 - ROC for predicting EF-improvement of 5% or above")
+text_heading2, text("Figure 3 - ROC curves of pre-intervention dynamic (MGU), static (hibernation), and perfusion PET measures for predicting LVEF-improvement of 5% or above")
 text_fig, image(Output/ROC_Prim_Combined.png) width(7.5 in)
 text_footnote, ///
 	abbrev("EF HEC MGU ROC") ///
 	linebreak ///
-	notes("* Hibernating tissue in area of intervention is total number of subareas with at least 10% hibernating tissue divided by area(s) of intervention. LAD has 7 subareas, LCx has 5, and RCA has 5. " ///
-	"# Coronary flow reserve in area of intervention is average CFR across the area(s) of intervention. " ///
-	"§ Myocardial glucose uptake during hyperinsulinemic euglycemic clamp in area of intervention is average MGU across area(s) of intervention") 
+	notes("* # § See table 1 footnotes.") 
 
 * Fig 4
 text_heading2, text("Figure 4 - Hibernating tissue and survival") 
 text_fig, image(Output/SurvByHiber_Comb.png)
-text_footnote, notes("Kaplan-Meier curves showing survival by the presence or absence of hibernating tissue in patients who underwent intervention (left) or all patients including those who did not undergo intervention (right). Follow-up started at date of intervention in the left figure and date of PET scan in the right figure. Number of patients at risk are shown below each figure. ")
+text_footnote, notes("Kaplan-Meier survival curves by hibernation % (above versus below median) for the included patients who underwent intervention (A) and for all patients (B). Follow-up started at date of intervention (A) and date of PET scan (B), respectively. Number of patients at risk are shown below each figure. ")
 
 
 ** Tables
 text_heading1, text("Tables") sectionbreak
 
 * Tab 1
-text_heading2, text("Table 1 - Baseline characteristics for patients undergoing intervention")
+text_heading2, text("Table 1 - Baseline patient characteristics")
 text_table, file("Output/TabPatCharByEF.dta") vars(rowname col_total) ///
 	header(1) left(1) ///
 	subheader(`"if varname=="BOLD""')
 text_footnote, ///
+	notes("Values are shown as mean (SD), n (%) or median (IQR range 25th to 75th percentile)." ///
+	"* Number of segments in area of intervention (up to 17) with at least 10% hibernating tissue divided by the number of coronary arteries intervened upon. Example: 3 hibernating segments in LAD + 1 in RCA / 2 arteries = 2." ///
+	"# Average coronary flow reserve across the area(s) of intervention." ///
+	"§ Average myocardial glucose uptake across area(s) of intervention.") ///
 	linebreak ///
 	abbrev("CABG CTO HEC IQR LAD LCx PCI RCA SD")
 
 * Tab 2
-text_heading2, text("Table 2 - Characteristics for patients with and without EF-improvement after intervention") sectionbreak
+text_heading2, text("Table 2 - Patient characteristics stratified by LVEF-improvement after revascularizatiion intervention") sectionbreak
 text_table, file("Output/TabPatCharByEF.dta") vars(rowname col_0 col_1 col_pval) ///
 	header(1) left(1) ///
 	subheader(`"if varname=="BOLD""')
 text_footnote, ///
-	notes("P-values for differences were calculated using Fischer's exact test (sex, diabetes, type of intervention, and area of intervention), Student's t-test (age and ejection-fraction), and Wilcoxon rank-sum test (remaining variables).") ///
+	notes("P-values for differences were calculated using Fisher's exact test (sex, diabetes, type of intervention, and area of intervention), Student's t-test (age and ejection-fraction), and Wilcoxon rank-sum test (remaining variables)." ///
+	"* # § See table 1 footnotes.") ///
 	linebreak ///
 	abbrev("CABG CTO HEC IQR LAD LCx PCI RCA SD")
 	
@@ -247,7 +253,9 @@ text_heading2, text("Supplementary 1 - Patient characteristics for included pati
 text_table, file("Output/TabPatCharExcl.dta") vars(rowname col_1 col_0 col_pval) ///
 	header(1) left(1) ///
 	subheader(`"if varname=="BOLD""')
-text_footnote, abbrev("CABG CTO HEC IQR LAD LCx PCI RCA SD")
+text_footnote, notes("* # § See table 1 footnotes in manuscript.") ///
+	linebreak ///
+	abbrev("CABG CTO HEC IQR LAD LCx PCI RCA SD")
 
 * Sup 2
 text_heading2, text("Supplementary 2 - Areas of intervention compared to areas of hibernation") sectionbreak
@@ -260,6 +268,7 @@ text_footnote, notes("Table includes both patients who underwent an intervention
 
 ** Save
 putdocx save "Output/Supplementary", replace
+
 
 
 *** Export miscellaneous calculations

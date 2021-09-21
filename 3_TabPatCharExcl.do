@@ -18,8 +18,8 @@ addtab_no if pat_sex==1, colpercent var(pat_sex) rowname("- Male")
 addtab_no if pat_sex==0, colpercent var(pat_sex) rowname("- Female")
 
 addtab_header, varname(GROUPHEADER) rowname("Diabetes status, n (%)")
-addtab_no if pat_dm==1, colpercent var(pat_dm) rowname("- Diabetics")
-addtab_no if pat_dm==0, colpercent var(pat_dm) rowname("- Non-diabetics")
+addtab_no if pat_dm==1, colpercent var(pat_dm) rowname("- Diabetes")
+addtab_no if pat_dm==0, colpercent var(pat_dm) rowname("- No diabetes")
 
 addtab_estimate, est(p50) par(iqr) var(pat_bmi) rowname("BMI in kg/m2, median (IQR)")
 addtab_estimate, est(p50) par(iqr) var(pat_meanbs) rowname("P-glucose during HEC in mM, median (IQR)")
@@ -29,7 +29,7 @@ addtab_estimate, est(p50) par(iqr) var(pat_meangir) rowname("Glucose infusion ra
 ** Cardiac status
 addtab_header, varname(BOLD) rowname("Cardiac status")
 
-addtab_header, varname(GROUPHEADER) rowname("Ejection-fraction on echocardiogram in %, mean (SD)")
+addtab_header, varname(GROUPHEADER) rowname("Ejection-fraction on echocardiography in %, mean (SD)")
 addtab_estimate, est(mean) par(sd) var(ef_pre) rowname("- Before intervention")
 addtab_estimate, est(mean) par(sd) var(ef_post) rowname("- After intervention")
 
@@ -52,16 +52,16 @@ addtab_estimate, est(p50) par(iqr) var(pet_scar) rowname("Scar tissue in %, medi
 
 addtab_header, varname(GROUPHEADER) rowname("Hibernating tissue, median (IQR)")
 addtab_estimate, est(p50) par(iqr) var(pet_hiber_overall) rowname("- Overall in %")
-addtab_estimate, est(p50) par(iqr) var(pet_hiber_aoi) rowname("- Area of intervention in counts *")
+addtab_estimate, est(p50) par(iqr) var(pet_hiber_aoi) rowname("- Area of intervention in n hibernating segments *")
 
 addtab_header, varname(GROUPHEADER) rowname("Coronary flow reserve, median (IQR)")
 addtab_estimate, est(p50) par(iqr) var(pet_cfr_overall) rowname("- Overall")
-addtab_estimate, est(p50) par(iqr) var(pet_cfr_aoi) rowname("- Area of intervention")
+addtab_estimate, est(p50) par(iqr) var(pet_cfr_aoi) rowname("- Area of intervention #")
 
 addtab_header, varname(GROUPHEADER) rowname("Myocardial glucose uptake during in µmol/min/100g tissue, median (IQR)")
 addtab_estimate, est(p50) par(iqr) var(pet_mgu_overall) rowname("- Overall")
 addtab_estimate, est(p50) par(iqr) var(pet_mgu_remote) rowname("- Remote area")
-addtab_estimate, est(p50) par(iqr) var(pet_mgu_aoi) rowname("- Area of intervention") 
+addtab_estimate, est(p50) par(iqr) var(pet_mgu_aoi) rowname("- Area of intervention §") 
 
 
 ** Replace missing values for no intervention

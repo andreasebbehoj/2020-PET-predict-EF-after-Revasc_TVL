@@ -126,7 +126,7 @@ drop itvtype_*
 * Diabetes
 gen pat_dm = 1 if diabetes=="Diabetes"
 recode pat_dm (.=0) if diabetes=="Non-diabetic"
-label define pat_dm_ 0 "Non-diabetics" 1 "Diabetics"
+label define pat_dm_ 0 "No diabetes" 1 "Diabetes"
 label value pat_dm pat_dm_
 label var pat_dm "Diabetes status"
 drop diabetes*
