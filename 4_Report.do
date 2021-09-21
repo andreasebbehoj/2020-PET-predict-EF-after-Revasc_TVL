@@ -271,7 +271,57 @@ putdocx save "Output/Supplementary", replace
 
 
 
-*** Export miscellaneous calculations
+*** Export calculations not presented in paper
+** Setup document
+global pagelayout = `"pagenum(decimal)"' /// 
+	+ `" footer(pfooter)"' ///
+	+ `" pagesize(A4)"' ///
+	+ `" margin(left, 1 in)"' ///
+	+ `" margin(right, 1 in)"' //
+
+putdocx begin, $pagelayout
+	
+putdocx paragraph, tofooter(pfooter)
+putdocx text ("Page ")
+putdocx pagenumber, bold
+putdocx text (" of ")
+putdocx pagenumber, totalpages bold
+
+text_heading1, text("Results of various analyses not presented in the paper")
+
+* Patient characteristics by diabetes status
+text_heading2, text("Patient characteristics stratified for diabetes status")
+text_table, file("Output/TabPatCharByDM.dta") vars(rowname col_1 col_0) ///
+	header(1) left(1) ///
+	subheader(`"if varname=="BOLD""')
+text_footnote, notes("Prespecified analysis. Not presented in paper as it did not add any new insights. * # § See table 1 footnotes in manuscript.") ///
+	linebreak ///
+	abbrev("CABG CTO HEC IQR LAD LCx PCI RCA SD")
+
+* AUC subgroup analyses
+text_heading2, text("ROC AUC sensitivity analysis stratified by patient characteristics") sectionbreak landscape
+text_table, file("Output/TabAucByCovars.dta") vars(rowname no pet_*) ///
+	header(1) left(1) ///
+	subheader(`"if varname=="BOLD""')
+text_footnote, ///
+	abbrev("EF LAD LCx RCA") ///
+	linebreak ///
+	notes("Sensitivity analysis to check if AUC varied by patient characteristics. The analysis was prespecified in statistical analysis plan. The analysis is mentioned but not not presented in paper as the analysis did not add any new insights. * # § See table 1 footnotes in manuscript.") 
+
+* ROC secondary outcome
+text_heading2, text("ROC curves for predicting LVEF-improvement of 10% or above") sectionbreak
+text_fig, image(Output/ROC_Sec_Combined.png) width(7.5 in)
+text_footnote, ///
+	abbrev("EF HEC MGU ROC") ///
+	linebreak ///
+	notes("Secondary outcome, described but not presented in paper. * # § See table 1 footnotes in manuscript.") 
+
+** Save
+putdocx save "Output/Report_NotPresented", replace
+
+
+
+*** Combine misc analyses for text into one file
 local filelist : dir "Output" files "Text*"
 local filesdir = ""
 foreach file of local filelist {
