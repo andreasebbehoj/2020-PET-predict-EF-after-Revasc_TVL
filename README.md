@@ -1,18 +1,41 @@
 # 2020-PET-predict-EF-after-Revasc_TVL
+
+# About this repository
 This project contains the analysis for the paper on the predictive values of cardiac PET parameters on the improvement in left ventricular ejection fraction after coronary revascularization procedure by Luong TV and Ebbehoj A et al.
+
+The purpose of this repository is to provide transparency about the statistical analysis plan and share the Stata code to allow other researchers to replicate the analysis.
+
+Due to privacy concerns, the original data is NOT available in the repository. Upon request, the corresponding author will detail restrictions to data availability and under which conditions access to some of the data may be provided.
+
+## Table of contents
+- [About this repository](#about-this-repository)
+  * [Table of contents](#table-of-contents)
+  * [Research question](#research-question)
+  * [Instructions](#instructions)
+  * [Folder structure](#folder-structure)
+  * [Abbreviations](#abbreviations)
+- [Statistical analysis plan](#statistical-analysis-plan)
+  * [1) Exposure variables](#1--exposure-variables)
+  * [2) Outcome variables](#2--outcome-variables)
+  * [3) Statistics](#3--statistics)
+  * [4) Table shells](#4--table-shells)
+  * [5) Figure layout](#5--figure-layout)
+  * [6) Change log](#6--change-log)
+    + [Changes before analysis (prespecified)](#changes-before-analysis--prespecified-)
+    + [Deviations from SAP after initial analysis (post hoc)](#deviations-from-sap-after-initial-analysis--post-hoc-)
+    + [Changes after submission](#changes-after-submission)
+
+<small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>
 
 ## Research question
 We aim to investigate whether PET-scans with <sup>82</sup>Rb and dynamic FDG prior to coronary revascularization procedure can predict improvement of left ventricular EF in patients with ischemic heart failure (:HF). Secondarily, we aim to investigate if the predictive values of the PET parameters differ in these patients depending on diabetes status.
 
 Patients were recruited as a part of a study on cardiac insulin resistance and survival in patients with ischemic HF (n=131). Of those, the 44 patients who underwent a successful revascularization procedure were recruited in this study.
 
-## About this repository
-The purpose of this repository is to provide transparency about the analysis and allow other researchers to replicate the analysis. Due to privacy concerns, the original data is NOT available in the repository. Upon request, the corresponding author will detail restrictions to data availability and under which conditions access to some of the data may be provided.
-
 ## Instructions
 The analysis is conducted with Stata Statistical Software 16.1 (StataCorp LLC, College Station, TX, USA). The analysis is run in the 'O_Master.do' file.
 
-Folder structure:
+## Folder structure
 ```
 Project folder
 |   README.md
@@ -244,8 +267,6 @@ The development of the Stata code is documented in GitHub's "commits" section, a
     - Removed table with secondary outcome (EF improvement >10%), AUC by patient characteristics, and PatChar by DM status as they did not add anything to the analysis.
     - Added survival analysis by PET hibernation
     - Added explanatory figures to manuscript: patient flow figure + example of cardiac PET scan
-
-
 
 ### Changes after submission
 ...
