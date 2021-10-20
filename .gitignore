@@ -16,5 +16,8 @@
 *.pdf
 Notes/*
 
-!/log/*
 *.smcl
+
+!/log/*
+!/Output/Report_*
+!/Output/Qnorm/*

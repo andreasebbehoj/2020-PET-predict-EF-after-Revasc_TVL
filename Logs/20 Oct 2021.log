@@ -1,0 +1,3828 @@
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  C:\Users\au335571\Forskning\2020-PET-predict-EF-after-Revasc_TVL\Logs/20 Oct 2021.log
+  log type:  text
+ opened on:  20 Oct 2021, 11:30:22
+
+. 
+. ***** 0_Master.do *****
+. /*
+> 
+> The do-file is split in four sections:
+> 1) Stata setup
+> 2) Import patient data and define study variables
+> 3) Analysis
+> 4) Combine report
+> */
+. 
+. 
+. 
+. ***** 1) STATA SETUP
+. /*
+> This section:
+> - Clears memory
+> - Installs necessary Stata program
+> - Defines custom programs
+> - Defines common settings for figures and tables
+> */
+. do 1_Setup.do
+
+. ***** 1_Setup.do *****
+. version 16
+
+. clear all
+
+. file close _all
+
+. frame reset
+
+. 
+. set more off
+
+. 
+. *** Generate necessary folders
+. capture: mkdir Input
+
+. capture: mkdir Data
+
+. capture: mkdir Output
+
+. capture: mkdir Logs
+
+. 
+. 
+. *** Install necessary packages
+. ssc install grstyle, replace
+checking grstyle consistency and verifying not already installed...
+all files already exist and are up to date.
+
+. ssc install palettes, replace
+checking palettes consistency and verifying not already installed...
+all files already exist and are up to date.
+
+. ssc install colrspace, replace
+checking colrspace consistency and verifying not already installed...
+all files already exist and are up to date.
+
+. 
+. 
+. *** Define custom programs
+. global F4 = "codebook "
+
+. 
+. ** Convert variable+labels from missing to non-missing integers
+. program define conv_missing
+  1. syntax, var(varname) [combmiss(string)]
+  2. 
+. * Unique values (without unlabeled . missing)
+. qui: levelsof `var', missing clean local(levels)
+  3. local levels = subinstr("`levels'", " . ", " ", 1)
+  4. 
+. * Label name and summary
+. local lblname : value label `var'
+  5. di "recode: `var'" _col(30) "value label: `lblname'" _col(60) "values: `levels'"
+  6. 
+. * Loop over values and change missing values to integers
+. local catno = wordcount("`levels'") // Number of values
+  7. local xnew = 1
+  8. foreach x of local levels {
+  9.         if "`x'"!="`xnew'" {
+ 10.                 local xlabel : label `lblname' `x'
+ 11.                 qui: recode `var' (`x'=`xnew')
+ 12.                 di _col(5) "from `x' to `xnew'" _col(20)  "`xlabel'  (`r(N)' changes made)"
+ 13.                 label define `lblname' `x' "", modify // remove old label
+ 14.                 label define `lblname' `xnew' "`xlabel'", modify // and new label
+ 15. 
+.         }
+ 16.         local xnew = `xnew'+1
+ 17. }
+ 18. end
+
+. 
+. ** Add new row/obs to dataset (current or frame)
+. capture: program drop newrow
+
+. program define newrow
+  1.         syntax , [frame(string)]
+  2.         * Current dataset (default)
+.         if mi("`frame'") {
+  3.                 qui: count
+  4.                 local newobs=`r(N)'+1
+  5.                 qui: set obs `newobs'
+  6.         }
+  7.         * Frame if specified
+.         if !mi("`frame'") {
+  8.                 qui frame `frame': count
+  9.                 local newobs=`r(N)'+1
+ 10.                 qui frame `frame': set obs `newobs'
+ 11.         }
+ 12. end
+
+. 
+end of do-file
+
+. do 1_addtab.do
+
+. ***** 1_addtab.do *****
+. /* Program for making custom baseline tables with combinations of n (%), median (iqr), mean(sd) etc. Table presents total values and results stratified by 
+> columnvar
+> 
+> addtab_setup:
+>         generate a new frame, stores labels and create necessary variables (varname rowname col_total col_1 col_2 etc)
+> 
+> addtab_header:
+>         adds new row with a header and no data
+> 
+> addtab_estimate:
+>         adds new row with mean (SD), median (IQR) or other combinations from "su var, detail" output
+> 
+> addtab_no:      
+>         adds new row with N nonmissing. 
+>         N can optionally be combined with an if-statement (for subgroups) and calculate % of total nonmissing in column
+> */
+. 
+. *** Setup new table
+. capture: program drop addtab_setup
+
+. program define addtab_setup
+  1. syntax, frame(string) columnvar(varname)
+  2. 
+. ** Store values for addtab_ commands 
+. * Frame name
+. global addtab_frame = "`frame'"
+  3. 
+. * Column var, categories and labels
+. global addtab_columnvar = "`columnvar'" 
+  4. qui: levelsof `columnvar'
+  5. global addtab_columncats = "total `r(levels)'"
+  6. 
+. * Column var labels
+. foreach cat in `r(levels)' {
+  7.         global addtab_vallab_`cat' : label (`columnvar') `cat'
+  8.         di "Column_`cat': ${addtab_vallab_`cat'}"
+  9. }
+ 10. global addtab_vallab_total = "Total"
+ 11. 
+. ** Generate empty frame
+. capture: frame drop $addtab_frame
+ 12. frame create $addtab_frame
+ 13. frame $addtab_frame {
+ 14.         newrow
+ 15.         qui: gen varname = ""
+ 16.         qui: gen rowname = ""
+ 17.         format %-5s varname rowname
+ 18.         foreach cat of global addtab_columncats {
+ 19.                 qui: gen col_`cat' = "${addtab_vallab_`cat'}" if _n==1
+ 20.                 label var col_`cat' "${addtab_vallab_`cat'}"
+ 21.         }
+ 22.         qui: gen col_pval = "P-value" if _n==1
+ 23. }
+ 24. 
+. end
+
+. 
+. *** Add header without data
+. capture: program drop addtab_header
+
+. program define addtab_header
+  1. syntax, [varname(string) rowname(string)]
+  2. 
+. * Missing optional options 
+. if mi("`varname'") {
+  3.         local varname = "header"
+  4. }
+  5. 
+. * Add new row 
+. frame $addtab_frame {
+  6.         newrow
+  7.         qui: replace varname = "`varname'" if _n==_N
+  8.         qui: replace rowname = "`rowname'" if _n==_N
+  9. }
+ 10. 
+. end
+
+. 
+. *** Estimate and SD/IQR by column 
+. capture: program drop addtab_estimate
+
+. program define addtab_estimate
+  1. syntax, var(varname) rowname(string) [format(string) ESTimate(string) PARenthesis(string)]
+  2. 
+. * Missing optional vars
+. if mi("`format'") {
+  3.         local format = `", 0.1), "%4.1f" "'
+  4. }
+  5. 
+. if mi("`estimate'") {
+  6.         di as error "estimate() is missing. Must be mean, p50 or any other r() output from:" _n "summarize `var', detail"
+  7.         error 
+  8. }
+  9. 
+. * Add new row
+. frame $addtab_frame {
+ 10.         newrow
+ 11.         qui: replace varname = "`var'" if _n==_N
+ 12.         qui: replace rowname = "`rowname'" if _n==_N
+ 13. }
+ 14. 
+. * Summarize total/by colum
+. di _col(25) "`estimate' `parenthesis'"
+ 15. foreach cat of global addtab_columncats {
+ 16.         if "`cat'"=="total" {
+ 17.                 qui: su `var', detail
+ 18.         }
+ 19.         else {
+ 20.                 qui: su `var' if $addtab_columnvar==`cat', detail
+ 21.         }
+ 22.         
+.         * Estimate
+.         local result = string(round(`r(`estimate')' `format') 
+ 23.         
+.         * Parenthesis
+.         if !mi("`parenthesis'") {
+ 24.                 * IQR 
+.                 if "`parenthesis'"=="iqr" {
+ 25.                         local result = "`result' (" ///
+>                                 + string(round(`r(p25)' `format') ///
+>                                 + "-" ///
+>                                 + string(round(`r(p75)' `format') ///
+>                                 + ")"
+ 26.                 }
+ 27.                 * Other parenthesis
+.                 else {
+ 28.                         local result = "`result' (" ///
+>                                 + string(round(`r(`parenthesis')' `format') ///
+>                                 + ")"
+ 29.                 }
+ 30.         }
+ 31.         
+.         di _col(3) "${addtab_vallab_`cat'}" _col(25) "`result'" _col(40) "(N=`r(N)')"
+ 32.         
+.         qui frame $addtab_frame: replace col_`cat' = "`result'" if _n==_N
+ 33. }
+ 34. 
+. end
+
+. 
+. *** N and % 
+. capture: program drop addtab_no
+
+. program define addtab_no
+  1. syntax [if], var(varname) rowname(string) [format(string) COLPercent]
+  2. 
+. * Missing optional vars
+. if mi("`format'") {
+  3.         local format = `", 0.1), "%4.1f" "'
+  4. }
+  5. 
+. * If subgroup
+. if !mi("`if'") {
+  6.         local if2 = "& (" + subinstr("`if'", "if ", "", 1) + ")"
+  7.         di "if ... `if2'"
+  8. }
+  9. 
+. * Add new row
+. frame $addtab_frame {
+ 10.         newrow
+ 11.         qui: replace varname = "`var'" if _n==_N
+ 12.         qui: replace rowname = "`rowname'" if _n==_N
+ 13. }
+ 14. 
+. * Summarize total/by column
+. di _col(25) "N `colpercent'"
+ 15. foreach cat of global addtab_columncats {
+ 16.         if "`cat'"=="total" {
+ 17.                 * N
+.                 qui: count if !mi(`var') `if2'
+ 18.                 local n = `r(N)'
+ 19.                 * For %
+.                 qui: count if !mi(`var')
+ 20.                 local total = `r(N)'
+ 21.         }
+ 22.         else {
+ 23.                 * N
+.                 qui: count if $addtab_columnvar==`cat' `if2'
+ 24.                 local n = `r(N)'
+ 25.                 * For %
+.                 qui: count if !mi(`var') & $addtab_columnvar==`cat'
+ 26.                 local total = `r(N)'
+ 27.         }
+ 28.         
+.         * Estimate
+.         local result = string(`n') 
+ 29.         * Parenthesis
+.         if !mi("`colpercent'") {
+ 30.                 local percent = 100*`n'/`total'
+ 31.                 local result = "`result' (" ///
+>                         + string(round(`percent' `format') ///
+>                         + ")"
+ 32.         }
+ 33.         
+.         di _col(3) "${addtab_vallab_`cat'}" _col(25) "`result'" _col(40) "`n'/`total'"
+ 34.         
+.         qui frame $addtab_frame: replace col_`cat' = "`result'" if _n==_N
+ 35. }
+ 36. 
+. end
+
+. 
+. *** P-values
+. capture: program drop addtab_pval
+
+. program define addtab_pval
+  1. syntax, varname(varname) ptest(string) returnval(string)
+  2. * Calculate p-value
+. `ptest'
+  3. local pval = `returnval'
+  4. 
+. * Format p-val
+. if `pval'>0.99 {
+  5.         local pvalstring = ">0.99"
+  6. }
+  7. if inrange(`pval', 0.05, 0.99) {
+  8.         local pvalstring = string(round(`pval', 0.01), "%4.2f")
+  9. }
+ 10. if `pval'>=0.001 & `pval'<0.05 {
+ 11.         local pvalstring = string(round(`pval', 0.001), "%4.3f")
+ 12. }
+ 13. if `pval'<0.001 {
+ 14.         local pvalstring = "<0.001"
+ 15. }
+ 16. di "`pvalstring'"
+ 17. 
+. * Add to table
+. frame table {
+ 18.         qui: replace col_pval = "`pvalstring'" ///
+>                 if varname=="`varname'" & varname[_n-1]!="`varname'" // Only first occurence of varname
+ 19. }
+ 20. 
+. end
+
+. 
+end of do-file
+
+. do 1_FigTabLayout.do
+
+. ***** 1_FigTabLayout.do *****
+. 
+. ***** Graphs
+. ** General
+. set scheme s2color
+
+. grstyle init graphlayout, replace
+
+. grstyle set plain // No plot region color, white background + other tweaks
+
+. 
+. ** Color
+. grstyle set color black, plots(1)
+
+. 
+. ** Size
+. grstyle set graphsize 2400pt 2400pt // in pixels, default is 5.5 inches *72 pt/inch = 396pt
+
+. grstyle set symbolsize small
+
+. grstyle set size 40pt: axis_title // X and Y axis text size
+
+. 
+. ** Axis
+. grstyle anglestyle vertical_tick horizontal // Horizontal "tick"text on y-axis
+
+. grstyle color major_grid gs11 // colour of horizontal lines
+
+. 
+. ** Legend
+. grstyle set legend ///
+>         10, /// clock position of legend (1-12).
+>         nobox /// no legend background
+>         inside // inside plotregion
+
+. 
+. ** Line graphs (size, colors and patterns)
+. grstyle set linewidth 3pt: p // line width (line and rcap)
+
+. 
+. 
+. ** Export
+. graph set eps logo off
+
+. global exportformat = ".png"
+
+. global exportoptions = ", replace width(2400)"
+
+. global exportvector = ".pdf, replace"
+
+. 
+end of do-file
+
+. 
+. 
+. 
+. ***** 2) PREPARE PATIENT DATA
+. /*
+> This section:
+> - Imports patient data from a Stata file 
+> - Defines cohort and generate study variables 
+> */
+. do 2_CohortAndVars.do
+
+. ***** 2_CohortAndVars.do *****
+. use "Input/Viabdyn_131patients_TVL 2021-04-05.dta", clear
+
+. 
+. 
+. 
+. *** General formatting
+. * Var names in lower case
+. qui: ds
+
+. foreach var in `r(varlist)' {
+  2.         local name = lower("`var'")
+  3.         capture: rename `var' `name'
+  4. }
+
+. format %d dato skanningsdato datodød censurdato
+
+. 
+. rename preekkoef ef_pre
+
+. rename postekkoef ef_post
+
+. 
+. *** Correct errors
+. * Date problem due to Excel conversion
+. gen diff = skanningsdato - dato // should have been the same date (diff=0)
+
+. su diff // diff=21916
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+        diff |        131       21916           0      21916      21916
+
+. replace skanningsdato=skanningsdato-21916
+(131 real changes made)
+
+. replace censurdato=censurdato-21916
+(131 real changes made)
+
+. replace datodød=datodød-21916
+(31 real changes made)
+
+. 
+. rename skanningsdato date_scan
+
+. rename censurdato date_cens
+
+. rename datodød date_death
+
+. rename failure death
+
+. drop diff failuredate entrydate exitdate hændelse1 hændelse2 indlæggelse1 indlæggelse2 outcomedød
+
+. 
+. *** Exclude special cases
+. gen excl = 1 if inlist(id, 106) // One patient with failed intervention
+(130 missing values generated)
+
+. recode excl (.=2) if inlist(id, 60) // One patient with intervention before PET
+(excl: 1 changes made)
+
+. 
+. label define excl_ 1 "Intervention failed" 2 "Intervention was done before PET scan"
+
+. label value excl excl_
+
+. 
+. * Remove information on excluded
+. foreach var in lad lcx rca {
+  2.     replace itv_`var'=. if !mi(excl) 
+  3. }
+(1 real change made, 1 to missing)
+(1 real change made, 1 to missing)
+(1 real change made, 1 to missing)
+
+. replace ef_post = . if !mi(excl)
+(2 real changes made, 2 to missing)
+
+. 
+. 
+. *** Dates in string
+. * Date of intervention
+. order behdato
+
+. gen datepos = strpos(behdato, "/") if itv==1, after(behdato)
+(87 missing values generated)
+
+. gen datestring = substr(behdato, datepos-2, 10) if datepos==3, after(behdato) // DD/MM/YYYY
+(89 missing values generated)
+
+. replace datestring = subinstr(substr(behdato, 1, 10), ".", "/", 2) if datepos==0 // DD.MM.YYYY
+(1 real change made)
+
+. replace datestring = "0" + substr(behdato, 1, 2) + "0" + substr(behdato, 3, 6) if datepos==2 // D/M/YYYY
+(1 real change made)
+
+. gen date_itv = date(datestring, "DMY"), after(behdato)
+(87 missing values generated)
+
+. format %d date_itv 
+
+. drop datestring datepos
+
+. 
+. *** Define patients vars
+. * Intervention (inclu or excluded)
+. label var itv "Intervention"
+
+. label define itv_ 0 "No intervention" 1 "Intervention"
+
+. label value itv itv_
+
+. 
+. * Age
+. rename alder pat_age
+
+. label var pat_age "Age in years"
+
+. 
+. qui: su pat_age, detail
+
+. gen pat_age_median = pat_age>=`r(p50)'
+
+. label var pat_age_median "Age" 
+
+. label define pat_age_median_ 0 "Below median age" 1 "Median age or above"
+
+. label value pat_age_median pat_age_median_
+
+. 
+. * Sex
+. gen pat_sex = 0 if lower(sex)=="kvinde"
+(114 missing values generated)
+
+. replace pat_sex = 1 if lower(sex)=="mand"
+(114 real changes made)
+
+. label var pat_sex "Sex"
+
+. label define pat_sex_ 0 "Women" 1 "Men"
+
+. label value pat_sex pat_sex_
+
+. drop sex
+
+. 
+. * BMI
+. replace højde = 172 if højde==72 // One patient with wrong height 
+(1 real change made)
+
+. gen pat_bmi = vægt/(højde/100)^2
+
+. label var pat_bmi "BMI in kg/m2"
+
+. drop højde vægt
+
+. 
+. * Mean glucose during HEC
+. rename meanbs pat_meanbs 
+
+. label var pat_meanbs "P-glucose during HEC in mM"
+
+. drop meanBs bs*
+
+. 
+. * GIR
+. rename meangir pat_meangir
+
+. label var pat_meangir "Glucose infusion rate during HEC in mg/kg/min"
+
+. drop gir* Gir*
+
+. 
+. * Area of intervention
+. recast int itv*
+
+. format %10.0g itv*
+
+. 
+. egen itv_n = rowtotal(itv_*)
+
+. label var itv_n "N areas of intervention"
+
+. 
+. gen itv_cat = 4 if inrange(itv_n, 2, 3) // multiple
+(111 missing values generated)
+
+. recode itv_cat (.=1) if itv_lad==1
+(itv_cat: 9 changes made)
+
+. recode itv_cat (.=2) if itv_lcx==1
+(itv_cat: 8 changes made)
+
+. recode itv_cat (.=3) if itv_rca==1
+(itv_cat: 7 changes made)
+
+. 
+. label define itv_cat_ 1 "LAD" 2 "LCX" 3 "RCA" 4 "Multiple areas"
+
+. label value itv_cat itv_cat_
+
+. label var itv_cat "Area of intervention"
+
+. 
+. * Types of intervention
+. foreach pro in cabg cto pci {
+  2.     gen itvtype_`pro' = 1 if strpos(lower(behdato), "`pro'") & itv==1
+  3. }
+(124 missing values generated)
+(115 missing values generated)
+(105 missing values generated)
+
+. 
+. gen itvtype = 1 if itvtype_cabg==1 
+(124 missing values generated)
+
+. recode itvtype (.=2) if itvtype_cto==1
+(itvtype: 16 changes made)
+
+. recode itvtype (.=3) if itvtype_pci==1
+(itvtype: 21 changes made)
+
+. label var itvtype "Type of intervention"
+
+. label define itvtype_ 1 "CABG" 2 "PCI with CTO" 3 "PCI without CTO"
+
+. label value itvtype itvtype_
+
+. drop itvtype_*
+
+. 
+. * Diabetes
+. gen pat_dm = 1 if diabetes=="Diabetes"
+(98 missing values generated)
+
+. recode pat_dm (.=0) if diabetes=="Non-diabetic"
+(pat_dm: 98 changes made)
+
+. label define pat_dm_ 0 "No diabetes" 1 "Diabetes"
+
+. label value pat_dm pat_dm_
+
+. label var pat_dm "Diabetes status"
+
+. drop diabetes*
+
+. 
+. 
+. 
+. *** Define cardiac outcomes (outcomes)
+. gen ef_diff = ef_post-ef_pre
+(87 missing values generated)
+
+. label var ef_diff "Change in echo-EF pre/post intervention"
+
+. 
+. recode ef_diff (5/max=1 "Yes") (min/4.99=0 "No"), gen(ef_prim) label(ef_prim_) 
+(29 differences between ef_diff and ef_prim)
+
+. label var ef_prim "EF improved 5% or more after intervention"
+
+. 
+. recode ef_diff (10/max=1 "Yes") (min/9.99=0 "No"), gen(ef_sec) label(ef_sec_) 
+(29 differences between ef_diff and ef_sec)
+
+. label var ef_sec "EF improved 10% or more after intervention"
+
+. 
+. * Pre intervention EF as covar
+. qui: su ef_pre, detail
+
+. gen ef_pre_median = ef_pre>=`r(p50)' if !mi(ef_pre)
+(1 missing value generated)
+
+. label var ef_pre_median "Pre-intervention EF"
+
+. label define ef_pre_median_ 0 "Below median EF" 1 "Median EF or above"
+
+. label value ef_pre_median ef_pre_median_
+
+. 
+. 
+. 
+. *** Define PET measures (exposures)
+. ** Scar tissue 
+. rename arvæv pet_scar
+
+. label var pet_scar "Scar tissue in %"
+
+. 
+. 
+. ** Hibernating tissue
+. describe *hiber*
+
+              storage   display    value
+variable name   type    format     label      variable label
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+hibernation     byte    %10.0g                hibernation
+tpdhibernatio~r str20   %20s                  TPDhibernationantalsegmenter
+
+. * Overall (in %)
+. rename hibernation pet_hiber_overall
+
+. label var pet_hiber_overall "Hibernating tissue in %;Overall"
+
+. 
+. * By area (in counts)
+. rename tpdhibernationantalsegmenter pet_hibersegments
+
+. replace pet_hibersegments = itrim(trim(pet_hibersegments))
+(3 real changes made)
+
+. foreach area in LAD LCx RCA {
+  2.         local varname = lower("`area'")
+  3.         gen pet_hiberseg_n_`varname' = real(substr(pet_hibersegments, strpos(pet_hibersegments, "`area'")+4, 1))
+  4. }
+
+. 
+. * In AoI (in % counts of maximum, averaged across AoIs)
+. gen hiberitv_lad = pet_hiberseg_n_lad if itv_lad==1
+(103 missing values generated)
+
+. gen hiberitv_lcx = pet_hiberseg_n_lcx if itv_lcx==1
+(107 missing values generated)
+
+. gen hiberitv_rca = pet_hiberseg_n_rca if itv_rca==1
+(115 missing values generated)
+
+. 
+. egen sum = rowtotal(hiberitv_*), missing
+(87 missing values generated)
+
+. gen pet_hiber_aoi = sum/itv_n
+(87 missing values generated)
+
+. label var pet_hiber_aoi "Hibernating tissue in n;Area of intervention *"
+
+. drop sum pet_hibersegments hiberitv_*
+
+. 
+. 
+. ** Coronary flow reserve (stress-flow/rest-flow, has no unit)
+. describe *cfr* // 8 patients wo. CFR, since they could not tolerate adenosis-induced stress-flow
+
+              storage   display    value
+variable name   type    format     label      variable label
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+cfrlad          double  %14.2f                CFRLAD
+cfrlcx          double  %14.2f                CFRLCx
+cfrrca          double  %14.2f                CFRRCA
+cfrtotal        double  %14.2f                CFRTotal
+
+. * Overall
+. rename cfrtotal pet_cfr_overall
+
+. label var pet_cfr_overall "Coronary flow reserve;Overall"
+
+. 
+. * AoI
+. foreach area in lad lcx rca {
+  2.         gen cfritv_`area' = cfr`area' if itv_`area'==1
+  3. }
+(110 missing values generated)
+(109 missing values generated)
+(118 missing values generated)
+
+. egen sum = rowtotal(cfritv_*), missing
+(95 missing values generated)
+
+. gen pet_cfr_aoi = sum/itv_n
+(95 missing values generated)
+
+. label var pet_cfr_aoi "Coronary flow reserve;Area of intervention #"
+
+. drop sum cfritv_*
+
+. 
+. 
+. ** Myocardial glucose uptake
+. describe *mgu*
+
+              storage   display    value
+variable name   type    format     label      variable label
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+mgutwo          double  %10.0g                MGUtwo
+mgupatlak       double  %14.2f                MGUpatlak
+mgupatlaklad    double  %14.2f                MGUpatlaklad
+mgupatlaklcx    double  %14.2f                MGUpatlaklcx
+mgupatlakrca    double  %14.2f                MGUpatlakrca
+mgupatlakave    double  %14.2f                MGUpatlakave
+
+. * Overall
+. rename mgupatlakave pet_mgu_overall 
+
+. label var pet_mgu_overall "MGU during HEC in µmol/min/100g tissue;Overall"
+
+. 
+. * Remote area
+. rename mgupatlak pet_mgu_remote 
+
+. label var pet_mgu_remote "MGU during HEC in µmol/min/100g tissue;Remote area"
+
+. 
+. * AoI
+. foreach area in lad lcx rca {
+  2.         gen mguitv_`area' = mgupatlak`area' if itv_`area'==1
+  3. }
+(103 missing values generated)
+(107 missing values generated)
+(115 missing values generated)
+
+. egen sum = rowtotal(mguitv_*), missing
+(87 missing values generated)
+
+. gen pet_mgu_aoi = sum/itv_n
+(87 missing values generated)
+
+. label var pet_mgu_aoi "MGU during HEC in µmol/min/100g tissue;Area of intervention §"
+
+. drop sum mguitv_*
+
+. 
+. 
+. 
+. *** Export full data
+. * Remove irrelevant vars
+. drop navn cpr nodash dato 
+
+. 
+. * Sort and reorder
+. sort id
+
+. order _all, alpha
+
+. order id excl pat_* ef_* itv* pet_* date_* death
+
+. 
+. * Save
+. save Data/cohort_wexcl.dta, replace
+file Data/cohort_wexcl.dta saved
+
+. 
+. 
+. *** Export cohort data
+. drop alderkat-Årsag2
+
+. 
+. * Patient flow
+. putdocx clear
+
+. putdocx begin
+
+. putdocx paragraph, style(Heading2)
+
+. putdocx text ("Patient flow")
+
+. putdocx paragraph
+
+. 
+. count
+  131
+
+. putdocx text ("`r(N)' patients in Viabdyn dataset"), linebreak
+
+. 
+. drop if itv==0 & mi(excl)
+(85 observations deleted)
+
+. putdocx text ("`r(N_drop)' excluded as they did not undergo an intervention"), linebreak
+
+. drop itv 
+
+. 
+. count if !mi(excl)
+  2
+
+. putdocx text ("`r(N)' who underwent an intervention were excluded due to:"), linebreak
+
+. qui: levelsof excl
+
+. foreach grp in `r(levels)' {
+  2.     local label : label (excl) `grp'
+  3.         di "`label'"
+  4.         drop if excl==`grp'
+  5.         putdocx text ("- `r(N_drop)' `label'"), linebreak
+  6. }
+Intervention failed
+(1 observation deleted)
+Intervention was done before PET scan
+(1 observation deleted)
+
+. drop excl 
+
+. count
+  44
+
+. putdocx text ("Final cohort was `r(N)' patients")
+
+. 
+. putdocx save Output/TextPatientFlow, replace
+successfully replaced "C:/Users/au335571/Forskning/2020-PET-predict-EF-after-Revasc_TVL/Output/TextPatientFlow.docx"
+
+. 
+. * Save
+. save Data/cohort.dta, replace
+file Data/cohort.dta saved
+
+. 
+end of do-file
+
+. 
+. 
+. 
+. ***** 3) ANALYSIS
+. /*
+> This section:
+> - Makes calculations for text
+> - Exports tables
+> - Exports graphs
+> - Generates supplementary results
+> */
+. 
+. ** Check parametric assumptions
+. do 3_Assumptions.do
+
+. ***** 3_Assumptions.do *****
+. use Data/Cohort, clear
+
+. *** Check parametric non-parametric
+. capture: mkdir Output/Qnorm
+
+. 
+. * By DM status for TabPatByCharDM
+. foreach var in pat_age pat_bmi pat_meanbs pat_meangir ef_pre ef_post pet_cfr_aoi pet_cfr_overall pet_hiber_aoi pet_hiber_overall pet_mgu_aoi pet_mgu_overal
+> l pet_mgu_remote pet_scar {
+  2.         qnorm `var' if pat_dm==0, title("Non-DM") name(q1, replace)
+  3.         qnorm `var' if pat_dm==1, title("DM") name(q2, replace)
+  4.         graph combine q1 q2, title("`var' by DM") name("`var'", replace)
+  5.         graph export Output/Qnorm/ByDM_`var'.png, replace width(1080) height(540)
+  6. }
+(file Output/Qnorm/ByDM_pat_age.png written in PNG format)
+(file Output/Qnorm/ByDM_pat_bmi.png written in PNG format)
+(file Output/Qnorm/ByDM_pat_meanbs.png written in PNG format)
+(file Output/Qnorm/ByDM_pat_meangir.png written in PNG format)
+(file Output/Qnorm/ByDM_ef_pre.png written in PNG format)
+(file Output/Qnorm/ByDM_ef_post.png written in PNG format)
+(file Output/Qnorm/ByDM_pet_cfr_aoi.png written in PNG format)
+(file Output/Qnorm/ByDM_pet_cfr_overall.png written in PNG format)
+(file Output/Qnorm/ByDM_pet_hiber_aoi.png written in PNG format)
+(file Output/Qnorm/ByDM_pet_hiber_overall.png written in PNG format)
+(file Output/Qnorm/ByDM_pet_mgu_aoi.png written in PNG format)
+(file Output/Qnorm/ByDM_pet_mgu_overall.png written in PNG format)
+(file Output/Qnorm/ByDM_pet_mgu_remote.png written in PNG format)
+(file Output/Qnorm/ByDM_pet_scar.png written in PNG format)
+
+. 
+. * By EF improvement for TabPatByCharDM
+. foreach var in pat_age pat_bmi pat_meanbs pat_meangir ef_pre ef_post pet_cfr_aoi pet_cfr_overall pet_hiber_aoi pet_hiber_overall pet_mgu_aoi pet_mgu_overal
+> l pet_mgu_remote pet_scar {
+  2.         qnorm `var' if ef_prim==0, title("Not improved") name(q1, replace)
+  3.         qnorm `var' if ef_prim==1, title("Improved") name(q2, replace)
+  4.         graph combine q1 q2, title("`var' by EF") name("`var'", replace)
+  5.         graph export Output/Qnorm/ByEF_`var'.png, replace width(1080) height(540)
+  6. }
+(file Output/Qnorm/ByEF_pat_age.png written in PNG format)
+(file Output/Qnorm/ByEF_pat_bmi.png written in PNG format)
+(file Output/Qnorm/ByEF_pat_meanbs.png written in PNG format)
+(file Output/Qnorm/ByEF_pat_meangir.png written in PNG format)
+(file Output/Qnorm/ByEF_ef_pre.png written in PNG format)
+(file Output/Qnorm/ByEF_ef_post.png written in PNG format)
+(file Output/Qnorm/ByEF_pet_cfr_aoi.png written in PNG format)
+(file Output/Qnorm/ByEF_pet_cfr_overall.png written in PNG format)
+(file Output/Qnorm/ByEF_pet_hiber_aoi.png written in PNG format)
+(file Output/Qnorm/ByEF_pet_hiber_overall.png written in PNG format)
+(file Output/Qnorm/ByEF_pet_mgu_aoi.png written in PNG format)
+(file Output/Qnorm/ByEF_pet_mgu_overall.png written in PNG format)
+(file Output/Qnorm/ByEF_pet_mgu_remote.png written in PNG format)
+(file Output/Qnorm/ByEF_pet_scar.png written in PNG format)
+
+. 
+. * By ITV vs non-ITV
+. use Data/Cohort_wexcl, clear
+
+. foreach var in pat_age pat_bmi pat_meanbs pat_meangir ef_pre pet_cfr_overall pet_hiber_overall pet_mgu_overall pet_mgu_remote pet_scar {
+  2.         qnorm `var' if itv==0, title("No intervention") name(q1, replace)
+  3.         qnorm `var' if itv==1, title("Intervention") name(q2, replace)
+  4.         graph combine q1 q2, title("`var' by ITV") name("`var'", replace)
+  5.         graph export Output/Qnorm/ByITV_`var'.png, replace width(1080) height(540)
+  6. }
+(file Output/Qnorm/ByITV_pat_age.png written in PNG format)
+(file Output/Qnorm/ByITV_pat_bmi.png written in PNG format)
+(file Output/Qnorm/ByITV_pat_meanbs.png written in PNG format)
+(file Output/Qnorm/ByITV_pat_meangir.png written in PNG format)
+(file Output/Qnorm/ByITV_ef_pre.png written in PNG format)
+(file Output/Qnorm/ByITV_pet_cfr_overall.png written in PNG format)
+(file Output/Qnorm/ByITV_pet_hiber_overall.png written in PNG format)
+(file Output/Qnorm/ByITV_pet_mgu_overall.png written in PNG format)
+(file Output/Qnorm/ByITV_pet_mgu_remote.png written in PNG format)
+(file Output/Qnorm/ByITV_pet_scar.png written in PNG format)
+
+. 
+end of do-file
+
+. 
+. 
+. global expvars = "pet_hiber_overall pet_hiber_aoi pet_scar pet_cfr_overall pet_cfr_aoi pet_mgu_overall pet_mgu_remote pet_mgu_aoi"
+
+. 
+. ** Patient characteristics
+. do 3_TabPatCharByDM.do
+
+. ***** 3_TabPatCharByDM.do *****
+. frame reset
+
+. use Data/cohort.dta, clear
+
+. 
+. *** Generate table
+. addtab_setup, frame(table) columnvar(pat_dm)
+Column_0: No diabetes
+Column_1: Diabetes
+
+. 
+. * N patients
+. addtab_no, var(id) rowname("Patients, N")
+                        N 
+  Total                 44             44/44
+  No diabetes           31             31/31
+  Diabetes              13             13/13
+
+. 
+. ** Patient characteristics
+. addtab_header, varname(BOLD) rowname("Patient characteristics")
+
+. addtab_estimate, est(mean) par(sd) var(pat_age) rowname("Age in years, mean (SD)")
+                        mean sd
+  Total                 64.9 (8.9)     (N=44)
+  No diabetes           64.7 (8.6)     (N=31)
+  Diabetes              65.3 (10.0)    (N=13)
+
+. 
+. addtab_header, varname(GROUPHEADER) rowname("Sex, n (%)")
+
+. addtab_no if pat_sex==1, colpercent var(pat_sex) rowname("- Male")
+if ... & (pat_sex==1)
+                        N colpercent
+  Total                 39 (88.6)      39/44
+  No diabetes           29 (93.5)      29/31
+  Diabetes              10 (76.9)      10/13
+
+. addtab_no if pat_sex==0, colpercent var(pat_sex) rowname("- Female")
+if ... & (pat_sex==0)
+                        N colpercent
+  Total                 5 (11.4)       5/44
+  No diabetes           2 (6.5)        2/31
+  Diabetes              3 (23.1)       3/13
+
+. 
+. addtab_estimate, est(p50) par(iqr) var(pat_bmi) rowname("BMI in kg/m2, median (IQR)")
+                        p50 iqr
+  Total                 26.7 (24.5-30.3)(N=44)
+  No diabetes           26.7 (24.1-30.1)(N=31)
+  Diabetes              28.1 (25.4-30.5)(N=13)
+
+. addtab_estimate, est(p50) par(iqr) var(pat_meanbs) rowname("P-glucose during HEC in mM, median (IQR)")
+                        p50 iqr
+  Total                 5.1 (4.8-5.3)  (N=44)
+  No diabetes           5.1 (4.8-5.2)  (N=31)
+  Diabetes              5.3 (5.2-6.3)  (N=13)
+
+. addtab_estimate, est(p50) par(iqr) var(pat_meangir) rowname("Glucose infusion rate during HEC in mg/kg/min, median (IQR)")
+                        p50 iqr
+  Total                 3.7 (2.6-4.8)  (N=44)
+  No diabetes           3.8 (2.7-5.0)  (N=31)
+  Diabetes              2.8 (2.1-4.5)  (N=13)
+
+. 
+. ** Cardiac status
+. addtab_header, varname(BOLD) rowname("Cardiac status")
+
+. 
+. addtab_header, varname(GROUPHEADER) rowname("Ejection-fraction on echocardiography in %, mean (SD)")
+
+. addtab_estimate, est(mean) par(sd) var(ef_pre) rowname("- Before intervention")
+                        mean sd
+  Total                 30.8 (9.8)     (N=44)
+  No diabetes           31.6 (11.1)    (N=31)
+  Diabetes              28.8 (5.8)     (N=13)
+
+. addtab_estimate, est(mean) par(sd) var(ef_post) rowname("- After intervention")
+                        mean sd
+  Total                 36.4 (10.9)    (N=44)
+  No diabetes           37.3 (11.9)    (N=31)
+  Diabetes              34.2 (8.1)     (N=13)
+
+. 
+. addtab_header, varname(GROUPHEADER) rowname("Types of intervention, n (%)")
+
+. addtab_no if itvtype==3, colpercent var(itvtype) rowname("- PCI without CTO")
+if ... & (itvtype==3)
+                        N colpercent
+  Total                 21 (47.7)      21/44
+  No diabetes           18 (58.1)      18/31
+  Diabetes              3 (23.1)       3/13
+
+. addtab_no if itvtype==2, colpercent var(itvtype) rowname("- PCI with CTO")
+if ... & (itvtype==2)
+                        N colpercent
+  Total                 16 (36.4)      16/44
+  No diabetes           10 (32.3)      10/31
+  Diabetes              6 (46.2)       6/13
+
+. addtab_no if itvtype==1, colpercent var(itvtype) rowname("- CABG")
+if ... & (itvtype==1)
+                        N colpercent
+  Total                 7 (15.9)       7/44
+  No diabetes           3 (9.7)        3/31
+  Diabetes              4 (30.8)       4/13
+
+. 
+. addtab_header, varname(GROUPHEADER) rowname("Area of intervention, n (%)")
+
+. addtab_no if itv_cat==1, colpercent var(itv_cat) rowname("- LAD")
+if ... & (itv_cat==1)
+                        N colpercent
+  Total                 9 (20.5)       9/44
+  No diabetes           7 (22.6)       7/31
+  Diabetes              2 (15.4)       2/13
+
+. addtab_no if itv_cat==2, colpercent var(itv_cat) rowname("- LCx")
+if ... & (itv_cat==2)
+                        N colpercent
+  Total                 8 (18.2)       8/44
+  No diabetes           6 (19.4)       6/31
+  Diabetes              2 (15.4)       2/13
+
+. addtab_no if itv_cat==3, colpercent var(itv_cat) rowname("- RCA")
+if ... & (itv_cat==3)
+                        N colpercent
+  Total                 7 (15.9)       7/44
+  No diabetes           6 (19.4)       6/31
+  Diabetes              1 (7.7)        1/13
+
+. addtab_no if itv_cat==4, colpercent var(itv_cat) rowname("- Multiple areas")
+if ... & (itv_cat==4)
+                        N colpercent
+  Total                 20 (45.5)      20/44
+  No diabetes           12 (38.7)      12/31
+  Diabetes              8 (61.5)       8/13
+
+. 
+. ** PET measurements
+. addtab_header, varname(BOLD) rowname("PET measurements")
+
+. 
+. addtab_estimate, est(p50) par(iqr) var(pet_scar) rowname("Scar tissue in %, median (IQR)")
+                        p50 iqr
+  Total                 14.0 (6.5-20.5)(N=44)
+  No diabetes           15.0 (6.0-22.0)(N=31)
+  Diabetes              11.0 (7.0-18.0)(N=13)
+
+. 
+. addtab_header, varname(GROUPHEADER) rowname("Hibernating tissue, median (IQR)")
+
+. addtab_estimate, est(p50) par(iqr) var(pet_hiber_overall) rowname("- Overall in %")
+                        p50 iqr
+  Total                 2.0 (0.0-8.0)  (N=44)
+  No diabetes           2.0 (0.0-8.0)  (N=31)
+  Diabetes              4.0 (1.0-9.0)  (N=13)
+
+. addtab_estimate, est(p50) par(iqr) var(pet_hiber_aoi) rowname("- Area of intervention in n hibernating segments *")
+                        p50 iqr
+  Total                 0.0 (0.0-2.0)  (N=44)
+  No diabetes           0.0 (0.0-2.0)  (N=31)
+  Diabetes              1.0 (0.0-2.0)  (N=13)
+
+. 
+. addtab_header, varname(GROUPHEADER) rowname("Coronary flow reserve, median (IQR)")
+
+. addtab_estimate, est(p50) par(iqr) var(pet_cfr_overall) rowname("- Overall")
+                        p50 iqr
+  Total                 1.7 (1.3-2.1)  (N=36)
+  No diabetes           1.7 (1.3-2.0)  (N=26)
+  Diabetes              1.6 (1.3-2.2)  (N=10)
+
+. addtab_estimate, est(p50) par(iqr) var(pet_cfr_aoi) rowname("- Area of intervention #")
+                        p50 iqr
+  Total                 1.6 (1.2-2.1)  (N=36)
+  No diabetes           1.7 (1.2-2.1)  (N=26)
+  Diabetes              1.3 (1.1-1.8)  (N=10)
+
+. 
+. addtab_header, varname(GROUPHEADER) rowname("Myocardial glucose uptake during in µmol/min/100g tissue, median (IQR)")
+
+. addtab_estimate, est(p50) par(iqr) var(pet_mgu_overall) rowname("- Overall")
+                        p50 iqr
+  Total                 27.4 (17.7-36.7)(N=44)
+  No diabetes           29.4 (20.3-37.3)(N=31)
+  Diabetes              25.6 (12.4-32.8)(N=13)
+
+. addtab_estimate, est(p50) par(iqr) var(pet_mgu_remote) rowname("- Remote area")
+                        p50 iqr
+  Total                 33.8 (21.6-40.8)(N=44)
+  No diabetes           34.4 (24.7-41.1)(N=31)
+  Diabetes              29.2 (15.0-37.6)(N=13)
+
+. addtab_estimate, est(p50) par(iqr) var(pet_mgu_aoi) rowname("- Area of intervention §")
+                        p50 iqr
+  Total                 27.9 (18.8-35.8)(N=44)
+  No diabetes           28.1 (21.1-36.2)(N=31)
+  Diabetes              27.3 (13.8-35.3)(N=13)
+
+. 
+. 
+. frame table: save Output/TabPatCharByDM.dta, replace
+file Output/TabPatCharByDM.dta saved
+
+. 
+. /*
+> frame change table
+> frame drop table
+
+end of do-file
+
+. do 3_TabPatCharByEF.do
+
+. ***** 3_TabPatCharByEF.do *****
+. frame reset
+
+. use Data/cohort.dta, clear
+
+. label define ef_prim_ 1 "EF improved 5% or more" 0 "EF not improved", modify
+
+. 
+. *** Generate table
+. addtab_setup, frame(table) columnvar(ef_prim)
+Column_0: EF not improved
+Column_1: EF improved 5% or more
+
+. 
+. * N patients
+. addtab_no, var(id) rowname("Patients, N")
+                        N 
+  Total                 44             44/44
+  EF not improved       18             18/18
+  EF improved 5% or more26             26/26
+
+. 
+. ** Patient characteristics
+. addtab_header, varname(BOLD) rowname("Patient characteristics")
+
+. addtab_estimate, est(mean) par(sd) var(pat_age) rowname("Age in years, mean (SD)")
+                        mean sd
+  Total                 64.9 (8.9)     (N=44)
+  EF not improved       61.8 (7.3)     (N=18)
+  EF improved 5% or more67.1 (9.4)     (N=26)
+
+. 
+. addtab_header, varname(GROUPHEADER) rowname("Sex, n (%)")
+
+. addtab_no if pat_sex==1, colpercent var(pat_sex) rowname("- Male")
+if ... & (pat_sex==1)
+                        N colpercent
+  Total                 39 (88.6)      39/44
+  EF not improved       16 (88.9)      16/18
+  EF improved 5% or more23 (88.5)      23/26
+
+. addtab_no if pat_sex==0, colpercent var(pat_sex) rowname("- Female")
+if ... & (pat_sex==0)
+                        N colpercent
+  Total                 5 (11.4)       5/44
+  EF not improved       2 (11.1)       2/18
+  EF improved 5% or more3 (11.5)       3/26
+
+. 
+. addtab_header, varname(GROUPHEADER) rowname("Diabetes status, n (%)")
+
+. addtab_no if pat_dm==1, colpercent var(pat_dm) rowname("- Diabetes")
+if ... & (pat_dm==1)
+                        N colpercent
+  Total                 13 (29.5)      13/44
+  EF not improved       6 (33.3)       6/18
+  EF improved 5% or more7 (26.9)       7/26
+
+. addtab_no if pat_dm==0, colpercent var(pat_dm) rowname("- No diabetes")
+if ... & (pat_dm==0)
+                        N colpercent
+  Total                 31 (70.5)      31/44
+  EF not improved       12 (66.7)      12/18
+  EF improved 5% or more19 (73.1)      19/26
+
+. 
+. addtab_estimate, est(p50) par(iqr) var(pat_bmi) rowname("BMI in kg/m2, median (IQR)")
+                        p50 iqr
+  Total                 26.7 (24.5-30.3)(N=44)
+  EF not improved       26.6 (23.5-32.3)(N=18)
+  EF improved 5% or more26.7 (25.4-29.5)(N=26)
+
+. addtab_estimate, est(p50) par(iqr) var(pat_meanbs) rowname("P-glucose during HEC in mM, median (IQR)")
+                        p50 iqr
+  Total                 5.1 (4.8-5.3)  (N=44)
+  EF not improved       5.0 (4.8-5.2)  (N=18)
+  EF improved 5% or more5.2 (4.9-5.3)  (N=26)
+
+. addtab_estimate, est(p50) par(iqr) var(pat_meangir) rowname("Glucose infusion rate during HEC in mg/kg/min, median (IQR)")
+                        p50 iqr
+  Total                 3.7 (2.6-4.8)  (N=44)
+  EF not improved       3.4 (2.0-4.4)  (N=18)
+  EF improved 5% or more3.8 (2.8-4.9)  (N=26)
+
+. 
+. 
+. ** Cardiac status
+. addtab_header, varname(BOLD) rowname("Cardiac status")
+
+. 
+. addtab_header, varname(GROUPHEADER) rowname("Ejection-fraction on echocardiography in %, mean (SD)")
+
+. addtab_estimate, est(mean) par(sd) var(ef_pre) rowname("- Before intervention")
+                        mean sd
+  Total                 30.8 (9.8)     (N=44)
+  EF not improved       31.9 (10.2)    (N=18)
+  EF improved 5% or more30.0 (9.7)     (N=26)
+
+. addtab_estimate, est(mean) par(sd) var(ef_post) rowname("- After intervention")
+                        mean sd
+  Total                 36.4 (10.9)    (N=44)
+  EF not improved       31.1 (10.9)    (N=18)
+  EF improved 5% or more40.0 (9.5)     (N=26)
+
+. 
+. addtab_header, varname(GROUPHEADER) rowname("Types of intervention, n (%)")
+
+. addtab_no if itvtype==3, colpercent var(itvtype) rowname("- PCI without CTO")
+if ... & (itvtype==3)
+                        N colpercent
+  Total                 21 (47.7)      21/44
+  EF not improved       9 (50.0)       9/18
+  EF improved 5% or more12 (46.2)      12/26
+
+. addtab_no if itvtype==2, colpercent var(itvtype) rowname("- PCI with CTO")
+if ... & (itvtype==2)
+                        N colpercent
+  Total                 16 (36.4)      16/44
+  EF not improved       6 (33.3)       6/18
+  EF improved 5% or more10 (38.5)      10/26
+
+. addtab_no if itvtype==1, colpercent var(itvtype) rowname("- CABG")
+if ... & (itvtype==1)
+                        N colpercent
+  Total                 7 (15.9)       7/44
+  EF not improved       3 (16.7)       3/18
+  EF improved 5% or more4 (15.4)       4/26
+
+. 
+. addtab_header, varname(GROUPHEADER) rowname("Area of intervention, n (%)")
+
+. addtab_no if itv_cat==1, colpercent var(itv_cat) rowname("- LAD")
+if ... & (itv_cat==1)
+                        N colpercent
+  Total                 9 (20.5)       9/44
+  EF not improved       4 (22.2)       4/18
+  EF improved 5% or more5 (19.2)       5/26
+
+. addtab_no if itv_cat==2, colpercent var(itv_cat) rowname("- LCx")
+if ... & (itv_cat==2)
+                        N colpercent
+  Total                 8 (18.2)       8/44
+  EF not improved       5 (27.8)       5/18
+  EF improved 5% or more3 (11.5)       3/26
+
+. addtab_no if itv_cat==3, colpercent var(itv_cat) rowname("- RCA")
+if ... & (itv_cat==3)
+                        N colpercent
+  Total                 7 (15.9)       7/44
+  EF not improved       4 (22.2)       4/18
+  EF improved 5% or more3 (11.5)       3/26
+
+. addtab_no if itv_cat==4, colpercent var(itv_cat) rowname("- Multiple areas")
+if ... & (itv_cat==4)
+                        N colpercent
+  Total                 20 (45.5)      20/44
+  EF not improved       5 (27.8)       5/18
+  EF improved 5% or more15 (57.7)      15/26
+
+. 
+. 
+. ** PET measurements
+. addtab_header, varname(BOLD) rowname("PET measurements")
+
+. 
+. addtab_estimate, est(p50) par(iqr) var(pet_scar) rowname("Scar tissue in %, median (IQR)")
+                        p50 iqr
+  Total                 14.0 (6.5-20.5)(N=44)
+  EF not improved       13.5 (7.0-21.0)(N=18)
+  EF improved 5% or more14.5 (6.0-20.0)(N=26)
+
+. 
+. addtab_header, varname(GROUPHEADER) rowname("Hibernating tissue, median (IQR)")
+
+. addtab_estimate, est(p50) par(iqr) var(pet_hiber_overall) rowname("- Overall in %")
+                        p50 iqr
+  Total                 2.0 (0.0-8.0)  (N=44)
+  EF not improved       4.5 (1.0-9.0)  (N=18)
+  EF improved 5% or more1.5 (0.0-6.0)  (N=26)
+
+. addtab_estimate, est(p50) par(iqr) var(pet_hiber_aoi) rowname("- Area of intervention in n hibernating segments *")
+                        p50 iqr
+  Total                 0.0 (0.0-2.0)  (N=44)
+  EF not improved       1.0 (0.0-2.3)  (N=18)
+  EF improved 5% or more0.0 (0.0-1.5)  (N=26)
+
+. 
+. addtab_header, varname(GROUPHEADER) rowname("Coronary flow reserve, median (IQR)")
+
+. addtab_estimate, est(p50) par(iqr) var(pet_cfr_overall) rowname("- Overall")
+                        p50 iqr
+  Total                 1.7 (1.3-2.1)  (N=36)
+  EF not improved       1.7 (1.4-2.0)  (N=13)
+  EF improved 5% or more1.6 (1.2-2.2)  (N=23)
+
+. addtab_estimate, est(p50) par(iqr) var(pet_cfr_aoi) rowname("- Area of intervention #")
+                        p50 iqr
+  Total                 1.6 (1.2-2.1)  (N=36)
+  EF not improved       1.5 (1.1-1.8)  (N=13)
+  EF improved 5% or more1.6 (1.2-2.2)  (N=23)
+
+. 
+. addtab_header, varname(GROUPHEADER) rowname("Myocardial glucose uptake during in µmol/min/100g tissue, median (IQR)")
+
+. addtab_estimate, est(p50) par(iqr) var(pet_mgu_overall) rowname("- Overall")
+                        p50 iqr
+  Total                 27.4 (17.7-36.7)(N=44)
+  EF not improved       28.0 (16.6-37.3)(N=18)
+  EF improved 5% or more27.4 (18.8-33.7)(N=26)
+
+. addtab_estimate, est(p50) par(iqr) var(pet_mgu_remote) rowname("- Remote area")
+                        p50 iqr
+  Total                 33.8 (21.6-40.8)(N=44)
+  EF not improved       34.5 (20.8-41.1)(N=18)
+  EF improved 5% or more32.8 (21.8-38.3)(N=26)
+
+. addtab_estimate, est(p50) par(iqr) var(pet_mgu_aoi) rowname("- Area of intervention §")
+                        p50 iqr
+  Total                 27.9 (18.8-35.8)(N=44)
+  EF not improved       32.6 (14.2-36.2)(N=18)
+  EF improved 5% or more27.4 (19.2-35.5)(N=26)
+
+. 
+. ** P-values
+. * Exact t-test
+. foreach var in pat_sex pat_dm itvtype itv_cat {
+  2.         addtab_pval, varname(`var') ptest(tab `var' ef_prim, exact) returnval(r(p_exact))
+  3. }
+
+           |   EF improved 5% or
+           |      more after
+           |     intervention
+       Sex | EF not im  EF improv |     Total
+-----------+----------------------+----------
+     Women |         2          3 |         5 
+       Men |        16         23 |        39 
+-----------+----------------------+----------
+     Total |        18         26 |        44 
+
+           Fisher's exact =                 1.000
+   1-sided Fisher's exact =                 0.675
+>0.99
+
+            |   EF improved 5% or
+            |      more after
+   Diabetes |     intervention
+     status | EF not im  EF improv |     Total
+------------+----------------------+----------
+No diabetes |        12         19 |        31 
+   Diabetes |         6          7 |        13 
+------------+----------------------+----------
+      Total |        18         26 |        44 
+
+           Fisher's exact =                 0.742
+   1-sided Fisher's exact =                 0.448
+0.74
+
+Enumerating sample-space combinations:
+stage 3:  enumerations = 1
+stage 2:  enumerations = 0
+stage 1:  enumerations = 0
+
+                |   EF improved 5% or
+                |      more after
+        Type of |     intervention
+   intervention | EF not im  EF improv |     Total
+----------------+----------------------+----------
+           CABG |         3          4 |         7 
+   PCI with CTO |         6         10 |        16 
+PCI without CTO |         9         12 |        21 
+----------------+----------------------+----------
+          Total |        18         26 |        44 
+
+           Fisher's exact =                 1.000
+>0.99
+
+Enumerating sample-space combinations:
+stage 4:  enumerations = 1
+stage 3:  enumerations = 5
+stage 2:  enumerations = 22
+stage 1:  enumerations = 0
+
+               |   EF improved 5% or
+               |      more after
+       Area of |     intervention
+  intervention | EF not im  EF improv |     Total
+---------------+----------------------+----------
+           LAD |         4          5 |         9 
+           LCX |         5          3 |         8 
+           RCA |         4          3 |         7 
+Multiple areas |         5         15 |        20 
+---------------+----------------------+----------
+         Total |        18         26 |        44 
+
+           Fisher's exact =                 0.213
+0.21
+
+. 
+. * T-test
+. foreach var in pat_age ef_pre ef_post {
+  2.         addtab_pval, varname(`var') ptest("ttest `var', by(ef_prim)") returnval(r(p))
+  3. }
+
+Two-sample t test with equal variances
+------------------------------------------------------------------------------
+   Group |     Obs        Mean    Std. Err.   Std. Dev.   [95% Conf. Interval]
+---------+--------------------------------------------------------------------
+EF not i |      18    61.77778    1.731212    7.344911    58.12524    65.43032
+EF impro |      26    67.07692    1.849676    9.431535    63.26744     70.8864
+---------+--------------------------------------------------------------------
+combined |      44    64.90909    1.348328    8.943799    62.18993    67.62825
+---------+--------------------------------------------------------------------
+    diff |           -5.299145    2.651611               -10.65031     .052022
+------------------------------------------------------------------------------
+    diff = mean(EF not i) - mean(EF impro)                        t =  -1.9985
+Ho: diff = 0                                     degrees of freedom =       42
+
+    Ha: diff < 0                 Ha: diff != 0                 Ha: diff > 0
+ Pr(T < t) = 0.0261         Pr(|T| > |t|) = 0.0522          Pr(T > t) = 0.9739
+0.05
+
+Two-sample t test with equal variances
+------------------------------------------------------------------------------
+   Group |     Obs        Mean    Std. Err.   Std. Dev.   [95% Conf. Interval]
+---------+--------------------------------------------------------------------
+EF not i |      18    31.94444    2.396174     10.1661    26.88896    36.99993
+EF impro |      26          30    1.901416     9.69536    26.08396    33.91604
+---------+--------------------------------------------------------------------
+combined |      44    30.79545    1.480522     9.82067     27.8097    33.78121
+---------+--------------------------------------------------------------------
+    diff |            1.944444    3.032063               -4.174506    8.063395
+------------------------------------------------------------------------------
+    diff = mean(EF not i) - mean(EF impro)                        t =   0.6413
+Ho: diff = 0                                     degrees of freedom =       42
+
+    Ha: diff < 0                 Ha: diff != 0                 Ha: diff > 0
+ Pr(T < t) = 0.7376         Pr(|T| > |t|) = 0.5248          Pr(T > t) = 0.2624
+0.52
+
+Two-sample t test with equal variances
+------------------------------------------------------------------------------
+   Group |     Obs        Mean    Std. Err.   Std. Dev.   [95% Conf. Interval]
+---------+--------------------------------------------------------------------
+EF not i |      18    31.11111    2.574243    10.92159    25.67993    36.54229
+EF impro |      26          40    1.860521    9.486833    36.16819    43.83181
+---------+--------------------------------------------------------------------
+combined |      44    36.36364     1.64474    10.90997     33.0467    39.68057
+---------+--------------------------------------------------------------------
+    diff |           -8.888889    3.094481               -15.13381   -2.643973
+------------------------------------------------------------------------------
+    diff = mean(EF not i) - mean(EF impro)                        t =  -2.8725
+Ho: diff = 0                                     degrees of freedom =       42
+
+    Ha: diff < 0                 Ha: diff != 0                 Ha: diff > 0
+ Pr(T < t) = 0.0032         Pr(|T| > |t|) = 0.0064          Pr(T > t) = 0.9968
+0.006
+
+. 
+. * Ranksum test
+. foreach var in pat_bmi pat_meanbs pat_meangir pet_scar pet_hiber_overall pet_hiber_aoi pet_cfr_overall pet_cfr_aoi pet_mgu_overall pet_mgu_aoi pet_mgu_remo
+> te {
+  2.         addtab_pval, varname(`var') ptest("ranksum `var', by(ef_prim) exact") returnval(r(p_exact))
+  3. }
+
+Two-sample Wilcoxon rank-sum (Mann-Whitney) test
+
+     ef_prim |      obs    rank sum    expected
+-------------+---------------------------------
+EF not impro |       18         405         405
+EF improved  |       26         585         585
+-------------+---------------------------------
+    combined |       44         990         990
+
+unadjusted variance     1755.00
+adjustment for ties        0.00
+                     ----------
+adjusted variance       1755.00
+
+Ho: pat_bmi(ef_prim==EF not improved) = pat_bmi(ef_prim==EF improved 5% or more)
+             z =   0.000
+    Prob > |z| =   1.0000
+    Exact Prob =   1.0000
+>0.99
+
+Two-sample Wilcoxon rank-sum (Mann-Whitney) test
+
+     ef_prim |      obs    rank sum    expected
+-------------+---------------------------------
+EF not impro |       18       367.5         405
+EF improved  |       26       622.5         585
+-------------+---------------------------------
+    combined |       44         990         990
+
+unadjusted variance     1755.00
+adjustment for ties       -0.74
+                     ----------
+adjusted variance       1754.26
+
+Ho: pat_me~s(ef_prim==EF not improved) = pat_me~s(ef_prim==EF improved 5% or more)
+             z =  -0.895
+    Prob > |z| =   0.3706
+    Exact Prob =   0.3777
+0.38
+
+Two-sample Wilcoxon rank-sum (Mann-Whitney) test
+
+     ef_prim |      obs    rank sum    expected
+-------------+---------------------------------
+EF not impro |       18         352         405
+EF improved  |       26         638         585
+-------------+---------------------------------
+    combined |       44         990         990
+
+unadjusted variance     1755.00
+adjustment for ties        0.00
+                     ----------
+adjusted variance       1755.00
+
+Ho: pat_me~r(ef_prim==EF not improved) = pat_me~r(ef_prim==EF improved 5% or more)
+             z =  -1.265
+    Prob > |z| =   0.2058
+    Exact Prob =   0.2125
+0.21
+
+Two-sample Wilcoxon rank-sum (Mann-Whitney) test
+
+     ef_prim |      obs    rank sum    expected
+-------------+---------------------------------
+EF not impro |       18         406         405
+EF improved  |       26         584         585
+-------------+---------------------------------
+    combined |       44         990         990
+
+unadjusted variance     1755.00
+adjustment for ties       -2.60
+                     ----------
+adjusted variance       1752.40
+
+Ho: pet_scar(ef_prim==EF not improved) = pet_scar(ef_prim==EF improved 5% or more)
+             z =   0.024
+    Prob > |z| =   0.9809
+    Exact Prob =   0.9858
+0.99
+
+Two-sample Wilcoxon rank-sum (Mann-Whitney) test
+
+     ef_prim |      obs    rank sum    expected
+-------------+---------------------------------
+EF not impro |       18         481         405
+EF improved  |       26         509         585
+-------------+---------------------------------
+    combined |       44         990         990
+
+unadjusted variance     1755.00
+adjustment for ties      -44.77
+                     ----------
+adjusted variance       1710.23
+
+Ho: pet_hi~l(ef_prim==EF not improved) = pet_hi~l(ef_prim==EF improved 5% or more)
+             z =   1.838
+    Prob > |z| =   0.0661
+    Exact Prob =   0.0669
+0.07
+
+Two-sample Wilcoxon rank-sum (Mann-Whitney) test
+
+     ef_prim |      obs    rank sum    expected
+-------------+---------------------------------
+EF not impro |       18       461.5         405
+EF improved  |       26       528.5         585
+-------------+---------------------------------
+    combined |       44         990         990
+
+unadjusted variance     1755.00
+adjustment for ties     -254.90
+                     ----------
+adjusted variance       1500.10
+
+Ho: pet_hi~i(ef_prim==EF not improved) = pet_hi~i(ef_prim==EF improved 5% or more)
+             z =   1.459
+    Prob > |z| =   0.1446
+    Exact Prob =   0.1491
+0.15
+
+Two-sample Wilcoxon rank-sum (Mann-Whitney) test
+
+     ef_prim |      obs    rank sum    expected
+-------------+---------------------------------
+EF not impro |       13         247       240.5
+EF improved  |       23         419       425.5
+-------------+---------------------------------
+    combined |       36         666         666
+
+unadjusted variance      921.92
+adjustment for ties       -0.36
+                     ----------
+adjusted variance        921.56
+
+Ho: pet_cf~l(ef_prim==EF not improved) = pet_cf~l(ef_prim==EF improved 5% or more)
+             z =   0.214
+    Prob > |z| =   0.8305
+    Exact Prob =   0.8391
+0.84
+
+Two-sample Wilcoxon rank-sum (Mann-Whitney) test
+
+     ef_prim |      obs    rank sum    expected
+-------------+---------------------------------
+EF not impro |       13         220       240.5
+EF improved  |       23         446       425.5
+-------------+---------------------------------
+    combined |       36         666         666
+
+unadjusted variance      921.92
+adjustment for ties        0.00
+                     ----------
+adjusted variance        921.92
+
+Ho: pet_cf~i(ef_prim==EF not improved) = pet_cf~i(ef_prim==EF improved 5% or more)
+             z =  -0.675
+    Prob > |z| =   0.4996
+    Exact Prob =   0.5152
+0.52
+
+Two-sample Wilcoxon rank-sum (Mann-Whitney) test
+
+     ef_prim |      obs    rank sum    expected
+-------------+---------------------------------
+EF not impro |       18         391         405
+EF improved  |       26         599         585
+-------------+---------------------------------
+    combined |       44         990         990
+
+unadjusted variance     1755.00
+adjustment for ties        0.00
+                     ----------
+adjusted variance       1755.00
+
+Ho: pet_mg~l(ef_prim==EF not improved) = pet_mg~l(ef_prim==EF improved 5% or more)
+             z =  -0.334
+    Prob > |z| =   0.7382
+    Exact Prob =   0.7498
+0.75
+
+Two-sample Wilcoxon rank-sum (Mann-Whitney) test
+
+     ef_prim |      obs    rank sum    expected
+-------------+---------------------------------
+EF not impro |       18         417         405
+EF improved  |       26         573         585
+-------------+---------------------------------
+    combined |       44         990         990
+
+unadjusted variance     1755.00
+adjustment for ties        0.00
+                     ----------
+adjusted variance       1755.00
+
+Ho: pet_mg~i(ef_prim==EF not improved) = pet_mg~i(ef_prim==EF improved 5% or more)
+             z =   0.286
+    Prob > |z| =   0.7745
+    Exact Prob =   0.7859
+0.79
+
+Two-sample Wilcoxon rank-sum (Mann-Whitney) test
+
+     ef_prim |      obs    rank sum    expected
+-------------+---------------------------------
+EF not impro |       18         399         405
+EF improved  |       26         591         585
+-------------+---------------------------------
+    combined |       44         990         990
+
+unadjusted variance     1755.00
+adjustment for ties        0.00
+                     ----------
+adjusted variance       1755.00
+
+Ho: pet_mg~e(ef_prim==EF not improved) = pet_mg~e(ef_prim==EF improved 5% or more)
+             z =  -0.143
+    Prob > |z| =   0.8861
+    Exact Prob =   0.8967
+0.90
+
+. 
+. frame table: save Output/TabPatCharByEF.dta, replace
+file Output/TabPatCharByEF.dta saved
+
+. 
+. /*
+> frame change table
+> frame drop table
+
+end of do-file
+
+. do 3_TabPatCharExcl.do
+
+. ***** 3_TabPatCharExcl.do *****
+. frame reset
+
+. use Data/cohort_wexcl.dta, clear
+
+. 
+. 
+. *** Generate table
+. addtab_setup, frame(table) columnvar(itv)
+Column_0: No intervention
+Column_1: Intervention
+
+. 
+. * N patients
+. addtab_no, var(id) rowname("Patients, N") 
+                        N 
+  Total                 131            131/131
+  No intervention       87             87/87
+  Intervention          44             44/44
+
+. 
+. ** Patient characteristics
+. addtab_header, varname(BOLD) rowname("Patient characteristics")
+
+. addtab_estimate, est(mean) par(sd) var(pat_age) rowname("Age in years, mean (SD)")
+                        mean sd
+  Total                 67.0 (10.5)    (N=131)
+  No intervention       68.1 (11.1)    (N=87)
+  Intervention          64.9 (8.9)     (N=44)
+
+. 
+. addtab_header, varname(GROUPHEADER) rowname("Sex, n (%)")
+
+. addtab_no if pat_sex==1, colpercent var(pat_sex) rowname("- Male")
+if ... & (pat_sex==1)
+                        N colpercent
+  Total                 114 (87.0)     114/131
+  No intervention       75 (86.2)      75/87
+  Intervention          39 (88.6)      39/44
+
+. addtab_no if pat_sex==0, colpercent var(pat_sex) rowname("- Female")
+if ... & (pat_sex==0)
+                        N colpercent
+  Total                 17 (13.0)      17/131
+  No intervention       12 (13.8)      12/87
+  Intervention          5 (11.4)       5/44
+
+. 
+. addtab_header, varname(GROUPHEADER) rowname("Diabetes status, n (%)")
+
+. addtab_no if pat_dm==1, colpercent var(pat_dm) rowname("- Diabetes")
+if ... & (pat_dm==1)
+                        N colpercent
+  Total                 33 (25.2)      33/131
+  No intervention       20 (23.0)      20/87
+  Intervention          13 (29.5)      13/44
+
+. addtab_no if pat_dm==0, colpercent var(pat_dm) rowname("- No diabetes")
+if ... & (pat_dm==0)
+                        N colpercent
+  Total                 98 (74.8)      98/131
+  No intervention       67 (77.0)      67/87
+  Intervention          31 (70.5)      31/44
+
+. 
+. addtab_estimate, est(p50) par(iqr) var(pat_bmi) rowname("BMI in kg/m2, median (IQR)")
+                        p50 iqr
+  Total                 26.6 (24.0-30.4)(N=131)
+  No intervention       26.5 (23.8-30.4)(N=87)
+  Intervention          26.7 (24.5-30.3)(N=44)
+
+. addtab_estimate, est(p50) par(iqr) var(pat_meanbs) rowname("P-glucose during HEC in mM, median (IQR)")
+                        p50 iqr
+  Total                 5.1 (4.8-5.4)  (N=131)
+  No intervention       5.1 (4.8-5.5)  (N=87)
+  Intervention          5.1 (4.8-5.3)  (N=44)
+
+. addtab_estimate, est(p50) par(iqr) var(pat_meangir) rowname("Glucose infusion rate during HEC in mg/kg/min, median (IQR)")
+                        p50 iqr
+  Total                 3.6 (2.4-5.1)  (N=131)
+  No intervention       3.6 (2.4-5.2)  (N=87)
+  Intervention          3.7 (2.6-4.8)  (N=44)
+
+. 
+. 
+. ** Cardiac status
+. addtab_header, varname(BOLD) rowname("Cardiac status")
+
+. 
+. addtab_header, varname(GROUPHEADER) rowname("Ejection-fraction on echocardiography in %, mean (SD)")
+
+. addtab_estimate, est(mean) par(sd) var(ef_pre) rowname("- Before intervention")
+                        mean sd
+  Total                 31.1 (10.0)    (N=130)
+  No intervention       31.3 (10.2)    (N=86)
+  Intervention          30.8 (9.8)     (N=44)
+
+. addtab_estimate, est(mean) par(sd) var(ef_post) rowname("- After intervention")
+                        mean sd
+  Total                 36.4 (10.9)    (N=44)
+  No intervention       0.0 (0.0)      (N=0)
+  Intervention          36.4 (10.9)    (N=44)
+
+. 
+. addtab_header, varname(GROUPHEADER) rowname("Types of intervention, n (%)")
+
+. addtab_no if itvtype==3, colpercent var(itvtype) rowname("- PCI without CTO")
+if ... & (itvtype==3)
+                        N colpercent
+  Total                 21 (47.7)      21/44
+  No intervention       0 (.)          0/0
+  Intervention          21 (47.7)      21/44
+
+. addtab_no if itvtype==2, colpercent var(itvtype) rowname("- PCI with CTO")
+if ... & (itvtype==2)
+                        N colpercent
+  Total                 16 (36.4)      16/44
+  No intervention       0 (.)          0/0
+  Intervention          16 (36.4)      16/44
+
+. addtab_no if itvtype==1, colpercent var(itvtype) rowname("- CABG")
+if ... & (itvtype==1)
+                        N colpercent
+  Total                 7 (15.9)       7/44
+  No intervention       0 (.)          0/0
+  Intervention          7 (15.9)       7/44
+
+. 
+. addtab_header, varname(GROUPHEADER) rowname("Area of intervention, n (%)")
+
+. addtab_no if itv_cat==1, colpercent var(itv_cat) rowname("- LAD")
+if ... & (itv_cat==1)
+                        N colpercent
+  Total                 9 (20.5)       9/44
+  No intervention       0 (.)          0/0
+  Intervention          9 (20.5)       9/44
+
+. addtab_no if itv_cat==2, colpercent var(itv_cat) rowname("- LCx")
+if ... & (itv_cat==2)
+                        N colpercent
+  Total                 8 (18.2)       8/44
+  No intervention       0 (.)          0/0
+  Intervention          8 (18.2)       8/44
+
+. addtab_no if itv_cat==3, colpercent var(itv_cat) rowname("- RCA")
+if ... & (itv_cat==3)
+                        N colpercent
+  Total                 7 (15.9)       7/44
+  No intervention       0 (.)          0/0
+  Intervention          7 (15.9)       7/44
+
+. addtab_no if itv_cat==4, colpercent var(itv_cat) rowname("- Multiple areas")
+if ... & (itv_cat==4)
+                        N colpercent
+  Total                 20 (45.5)      20/44
+  No intervention       0 (.)          0/0
+  Intervention          20 (45.5)      20/44
+
+. 
+. 
+. ** PET measurements
+. addtab_header, varname(BOLD) rowname("PET measurements")
+
+. 
+. addtab_estimate, est(p50) par(iqr) var(pet_scar) rowname("Scar tissue in %, median (IQR)")
+                        p50 iqr
+  Total                 19.0 (9.0-30.0)(N=131)
+  No intervention       23.0 (13.0-32.0)(N=87)
+  Intervention          14.0 (6.5-20.5)(N=44)
+
+. 
+. addtab_header, varname(GROUPHEADER) rowname("Hibernating tissue, median (IQR)")
+
+. addtab_estimate, est(p50) par(iqr) var(pet_hiber_overall) rowname("- Overall in %")
+                        p50 iqr
+  Total                 2.0 (0.0-5.0)  (N=131)
+  No intervention       1.0 (0.0-4.0)  (N=87)
+  Intervention          2.0 (0.0-8.0)  (N=44)
+
+. addtab_estimate, est(p50) par(iqr) var(pet_hiber_aoi) rowname("- Area of intervention in n hibernating segments *")
+                        p50 iqr
+  Total                 0.0 (0.0-2.0)  (N=44)
+  No intervention       0.0 (0.0-0.0)  (N=0)
+  Intervention          0.0 (0.0-2.0)  (N=44)
+
+. 
+. addtab_header, varname(GROUPHEADER) rowname("Coronary flow reserve, median (IQR)")
+
+. addtab_estimate, est(p50) par(iqr) var(pet_cfr_overall) rowname("- Overall")
+                        p50 iqr
+  Total                 1.7 (1.4-2.1)  (N=109)
+  No intervention       1.8 (1.4-2.1)  (N=73)
+  Intervention          1.7 (1.3-2.1)  (N=36)
+
+. addtab_estimate, est(p50) par(iqr) var(pet_cfr_aoi) rowname("- Area of intervention #")
+                        p50 iqr
+  Total                 1.6 (1.2-2.1)  (N=36)
+  No intervention       0.0 (0.0-0.0)  (N=0)
+  Intervention          1.6 (1.2-2.1)  (N=36)
+
+. 
+. addtab_header, varname(GROUPHEADER) rowname("Myocardial glucose uptake during in µmol/min/100g tissue, median (IQR)")
+
+. addtab_estimate, est(p50) par(iqr) var(pet_mgu_overall) rowname("- Overall")
+                        p50 iqr
+  Total                 24.6 (17.7-31.1)(N=126)
+  No intervention       23.8 (18.1-30.1)(N=82)
+  Intervention          27.4 (17.7-36.7)(N=44)
+
+. addtab_estimate, est(p50) par(iqr) var(pet_mgu_remote) rowname("- Remote area")
+                        p50 iqr
+  Total                 32.4 (24.4-39.1)(N=126)
+  No intervention       30.9 (25.1-38.9)(N=82)
+  Intervention          33.8 (21.6-40.8)(N=44)
+
+. addtab_estimate, est(p50) par(iqr) var(pet_mgu_aoi) rowname("- Area of intervention §") 
+                        p50 iqr
+  Total                 27.9 (18.8-35.8)(N=44)
+  No intervention       0.0 (0.0-0.0)  (N=0)
+  Intervention          27.9 (18.8-35.8)(N=44)
+
+. 
+. 
+. ** Replace missing values for no intervention
+. frame table: replace col_0 = "-" if ///
+>                         strpos(varname, "_aoi") /// No area of intervention PET vars
+>                         | inlist(varname, "itv_cat", "itvtype", "ef_post")
+(11 real changes made)
+
+. 
+. ** P-values
+. * Exact t-test
+. foreach var in pat_sex pat_dm {
+  2.         addtab_pval, varname(`var') ptest(tab `var' itv, exact) returnval(r(p_exact))
+  3. }
+
+           |     Intervention
+       Sex | No interv  Intervent |     Total
+-----------+----------------------+----------
+     Women |        12          5 |        17 
+       Men |        75         39 |       114 
+-----------+----------------------+----------
+     Total |        87         44 |       131 
+
+           Fisher's exact =                 0.789
+   1-sided Fisher's exact =                 0.463
+0.79
+
+   Diabetes |     Intervention
+     status | No interv  Intervent |     Total
+------------+----------------------+----------
+No diabetes |        67         31 |        98 
+   Diabetes |        20         13 |        33 
+------------+----------------------+----------
+      Total |        87         44 |       131 
+
+           Fisher's exact =                 0.523
+   1-sided Fisher's exact =                 0.271
+0.52
+
+. 
+. * T-test
+. foreach var in pat_age ef_pre {
+  2.         addtab_pval, varname(`var') ptest("ttest `var', by(itv)") returnval(r(p))
+  3. }
+
+Two-sample t test with equal variances
+------------------------------------------------------------------------------
+   Group |     Obs        Mean    Std. Err.   Std. Dev.   [95% Conf. Interval]
+---------+--------------------------------------------------------------------
+No inter |      87    68.12644    1.191591    11.11442    65.75763    70.49524
+Interven |      44    64.90909    1.348328    8.943799    62.18993    67.62825
+---------+--------------------------------------------------------------------
+combined |     131     67.0458     .918452    10.51216    65.22875    68.86285
+---------+--------------------------------------------------------------------
+    diff |            3.217346    1.931513               -.6041997    7.038891
+------------------------------------------------------------------------------
+    diff = mean(No inter) - mean(Interven)                        t =   1.6657
+Ho: diff = 0                                     degrees of freedom =      129
+
+    Ha: diff < 0                 Ha: diff != 0                 Ha: diff > 0
+ Pr(T < t) = 0.9509         Pr(|T| > |t|) = 0.0982          Pr(T > t) = 0.0491
+0.10
+
+Two-sample t test with equal variances
+------------------------------------------------------------------------------
+   Group |     Obs        Mean    Std. Err.   Std. Dev.   [95% Conf. Interval]
+---------+--------------------------------------------------------------------
+No inter |      86    31.27907    1.100883    10.20917    29.09022    33.46792
+Interven |      44    30.79545    1.480522     9.82067     27.8097    33.78121
+---------+--------------------------------------------------------------------
+combined |     130    31.11538    .8809001    10.04381     29.3725    32.85827
+---------+--------------------------------------------------------------------
+    diff |            .4836152    1.868404               -3.213341    4.180571
+------------------------------------------------------------------------------
+    diff = mean(No inter) - mean(Interven)                        t =   0.2588
+Ho: diff = 0                                     degrees of freedom =      128
+
+    Ha: diff < 0                 Ha: diff != 0                 Ha: diff > 0
+ Pr(T < t) = 0.6019         Pr(|T| > |t|) = 0.7962          Pr(T > t) = 0.3981
+0.80
+
+. 
+. * Ranksum test
+. foreach var in pat_bmi pat_meanbs pat_meangir pet_scar pet_hiber_overall pet_cfr_overall pet_mgu_overall pet_mgu_remote {
+  2.         addtab_pval, varname(`var') ptest("ranksum `var', by(itv) exact") returnval(r(p_exact))
+  3. }
+
+Two-sample Wilcoxon rank-sum (Mann-Whitney) test
+
+         itv |      obs    rank sum    expected
+-------------+---------------------------------
+No intervent |       87      5700.5        5742
+Intervention |       44      2945.5        2904
+-------------+---------------------------------
+    combined |      131        8646        8646
+
+unadjusted variance    42108.00
+adjustment for ties       -0.45
+                     ----------
+adjusted variance      42107.55
+
+Ho: pat_bmi(itv==No intervention) = pat_bmi(itv==Intervention)
+             z =  -0.202
+    Prob > |z| =   0.8397
+    Exact Prob =   0.8413
+0.84
+
+Two-sample Wilcoxon rank-sum (Mann-Whitney) test
+
+         itv |      obs    rank sum    expected
+-------------+---------------------------------
+No intervent |       87        5772        5742
+Intervention |       44        2874        2904
+-------------+---------------------------------
+    combined |      131        8646        8646
+
+unadjusted variance    42108.00
+adjustment for ties       -5.51
+                     ----------
+adjusted variance      42102.49
+
+Ho: pat_me~s(itv==No intervention) = pat_me~s(itv==Intervention)
+             z =   0.146
+    Prob > |z| =   0.8838
+    Exact Prob =   0.8852
+0.89
+
+Two-sample Wilcoxon rank-sum (Mann-Whitney) test
+
+         itv |      obs    rank sum    expected
+-------------+---------------------------------
+No intervent |       87        5811        5742
+Intervention |       44        2835        2904
+-------------+---------------------------------
+    combined |      131        8646        8646
+
+unadjusted variance    42108.00
+adjustment for ties       -0.45
+                     ----------
+adjusted variance      42107.55
+
+Ho: pat_me~r(itv==No intervention) = pat_me~r(itv==Intervention)
+             z =   0.336
+    Prob > |z| =   0.7367
+    Exact Prob =   0.7386
+0.74
+
+Two-sample Wilcoxon rank-sum (Mann-Whitney) test
+
+         itv |      obs    rank sum    expected
+-------------+---------------------------------
+No intervent |       87        6355        5742
+Intervention |       44        2291        2904
+-------------+---------------------------------
+    combined |      131        8646        8646
+
+unadjusted variance    42108.00
+adjustment for ties      -42.60
+                     ----------
+adjusted variance      42065.40
+
+Ho: pet_scar(itv==No intervention) = pet_scar(itv==Intervention)
+             z =   2.989
+    Prob > |z| =   0.0028
+    Exact Prob =   0.0026
+0.003
+
+Two-sample Wilcoxon rank-sum (Mann-Whitney) test
+
+         itv |      obs    rank sum    expected
+-------------+---------------------------------
+No intervent |       87        5427        5742
+Intervention |       44        3219        2904
+-------------+---------------------------------
+    combined |      131        8646        8646
+
+unadjusted variance    42108.00
+adjustment for ties    -1431.51
+                     ----------
+adjusted variance      40676.49
+
+Ho: pet_hi~l(itv==No intervention) = pet_hi~l(itv==Intervention)
+             z =  -1.562
+    Prob > |z| =   0.1183
+    Exact Prob =   0.1192
+0.12
+
+Two-sample Wilcoxon rank-sum (Mann-Whitney) test
+
+         itv |      obs    rank sum    expected
+-------------+---------------------------------
+No intervent |       73        4098        4015
+Intervention |       36        1897        1980
+-------------+---------------------------------
+    combined |      109        5995        5995
+
+unadjusted variance    24090.00
+adjustment for ties       -3.13
+                     ----------
+adjusted variance      24086.87
+
+Ho: pet_cf~l(itv==No intervention) = pet_cf~l(itv==Intervention)
+             z =   0.535
+    Prob > |z| =   0.5928
+    Exact Prob =   0.5955
+0.60
+
+Two-sample Wilcoxon rank-sum (Mann-Whitney) test
+
+         itv |      obs    rank sum    expected
+-------------+---------------------------------
+No intervent |       82        4867        5207
+Intervention |       44        3134        2794
+-------------+---------------------------------
+    combined |      126        8001        8001
+
+unadjusted variance    38184.67
+adjustment for ties        0.00
+                     ----------
+adjusted variance      38184.67
+
+Ho: pet_mg~l(itv==No intervention) = pet_mg~l(itv==Intervention)
+             z =  -1.740
+    Prob > |z| =   0.0819
+    Exact Prob =   0.0823
+0.08
+
+Two-sample Wilcoxon rank-sum (Mann-Whitney) test
+
+         itv |      obs    rank sum    expected
+-------------+---------------------------------
+No intervent |       82        5182        5207
+Intervention |       44        2819        2794
+-------------+---------------------------------
+    combined |      126        8001        8001
+
+unadjusted variance    38184.67
+adjustment for ties        0.00
+                     ----------
+adjusted variance      38184.67
+
+Ho: pet_mg~e(itv==No intervention) = pet_mg~e(itv==Intervention)
+             z =  -0.128
+    Prob > |z| =   0.8982
+    Exact Prob =   0.9006
+0.90
+
+. 
+. ** Export table
+. frame table: save Output/TabPatCharExcl.dta, replace
+file Output/TabPatCharExcl.dta saved
+
+. 
+. /*
+> frame change table
+> frame drop table
+
+end of do-file
+
+. 
+. ** Overall AUC and by subgroups
+. do 3_TabAucByCovars.do
+
+. ***** 3_TabAucByCovars.do *****
+. frame reset
+
+. use Data/cohort.dta, clear
+
+. 
+. *** Find cutoff points
+. /*
+> For ROC curves higher values must indicate higher risk (of EF-improvement in this case). 
+> lroc, determines this automatically, but does not show markers of the actual cutoffs. 
+> roctab can show markers and cutoffs but does not automatically change the direction of exposure to reflect higher risk. 
+> Therefore, the code below provides cutoff values, to manually add to the lroc curves.
+> */
+. /*
+> capture: mkdir Output/RocCutoff
+> capture: log close
+> 
+> log using "Output/RocCutoff/Cutoffs_results.smcl", replace
+> 
+> di "PRIMARY OUTCOME (EF >=5)"
+> foreach expvar of global expvars {
+>         local label : var label `expvar'
+>         di _n(3) "`expvar' - `label' on primary outcome"
+>         
+>         *gen `expvar'_lab = ustrunescape("\u2265") + string(`expvar')
+>         *qui: replace `expvar'=`expvar'*-1
+>         
+>         roctab ef_prim `expvar', detail label // graph name("`expvar'", replace) title("`label'") mlabel(`expvar'_lab) 
+>         *qui: graph export Output/RocCutoff/Roc_Prim_`expvar'$exportformat $exportoptions
+> }
+> 
+> di _n(6) "SECONDARY OUTCOME (EF >=10)"
+> foreach expvar of global expvars {
+>         local label : var label `expvar'
+>         di _n(3) "`expvar' - `label' on secondary outcome"
+> 
+>         roctab ef_prim `expvar', detail label // name("`expvar'", replace) title("`label'") mlabel(`expvar'_lab) 
+>         *qui: graph export Output/RocCutoff/Roc_Sec_`expvar'$exportformat $exportoptions
+> }
+> 
+> log close
+> translate "Output/RocCutoff/Cutoffs_results.smcl" "Output/RocCutoff/Cutoffs_results.pdf", translator(smcl2pdf)
+> 
+> */
+. 
+. *** Setup layout of table
+. ** Generate table
+. addtab_setup, frame(table) columnvar(pat_dm)
+Column_0: No diabetes
+Column_1: Diabetes
+
+. 
+. ** Add headers
+. addtab_header, varname("!mi(id)") rowname("Overall")
+
+. 
+. * Pat char
+. addtab_header, varname(BOLD) rowname("Patient characteristics")
+
+. 
+. addtab_header, varname(GROUPHEADER) rowname("Sex")
+
+. addtab_header, varname("pat_sex==1") rowname("- Men")
+
+. addtab_header, varname("pat_sex==0") rowname("- Women")
+
+. 
+. addtab_header, varname(GROUPHEADER) rowname("Diabetes")
+
+. addtab_header, varname("pat_dm==1") rowname("- Yes")
+
+. addtab_header, varname("pat_dm==0") rowname("- No")
+
+. 
+. * Cardiac status
+. addtab_header, varname(BOLD) rowname("Cardiac status")
+
+. 
+. addtab_header, varname(GROUPHEADER) rowname("Pre-intervention EF")
+
+. addtab_header, varname("ef_pre_median==0") rowname("- Below median")
+
+. addtab_header, varname("ef_pre_median==1") rowname("- Above median")
+
+. 
+. addtab_header, varname(GROUPHEADER) rowname("Area of intervention, n (%)")
+
+. addtab_header, varname("itv_cat==1") rowname("- LAD")
+
+. addtab_header, varname("itv_cat==2") rowname("- LCx")
+
+. addtab_header, varname("itv_cat==3") rowname("- RCA")
+
+. addtab_header, varname("itv_cat==4") rowname("- Multiple areas")
+
+. 
+. ** Modify headers in table
+. frame table: drop col_*
+
+. frame table: gen no = "N EF improved_P/N total" if _n==1
+(17 missing values generated)
+
+. foreach expvar of global expvars {
+  2.         local label : var label `expvar'
+  3.         local label = subinstr("`label'", ";", "_p", 1)
+  4.         qui frame table: gen `expvar' = "`label'" if _n==1
+  5. }
+
+. 
+. 
+. *** Calculate AUC by covar
+. local format = `", 0.01), "%4.2f" "'
+
+. 
+. foreach row in "!mi(id)" "pat_sex==1" "pat_sex==0" "pat_dm==1" "pat_dm==0" "ef_pre_median==0" "ef_pre_median==1" "itv_cat==1" "itv_cat==2" "itv_cat==3" "it
+> v_cat==4" {
+  2.         di "`row'"
+  3.         * N
+.         qui: count if `row' & ef_prim==1
+  4.         local n_improv = `r(N)'
+  5.         qui: count if `row' 
+  6.         local n_total = `r(N)'
+  7.         di "`n_improv'/`n_total'"
+  8.         qui frame table: replace no = "`n_improv'/`n_total'" if varname=="`row'"
+  9.         
+.         * AUC
+.         foreach expvar of global expvars {
+ 10.                 qui: roctab ef_prim `expvar' if `row'
+ 11.                 local result = string(round(`r(area)' `format') ///
+>                                 + "_p(" ///
+>                                 + string(round(`r(lb)' `format') ///
+>                                 + "-" ///
+>                                 + string(round(`r(ub)' `format') ///
+>                                 + ")"
+ 12.                 di _col(5) "`expvar'" _col(25) "`result'"
+ 13.                 qui frame table: replace `expvar' = "`result'" if varname=="`row'"
+ 14.         }
+ 15. }
+!mi(id)
+26/44
+    pet_hiber_overall   0.34_p(0.17-0.50)
+    pet_hiber_aoi       0.38_p(0.22-0.54)
+    pet_scar            0.50_p(0.32-0.68)
+    pet_cfr_overall     0.48_p(0.29-0.67)
+    pet_cfr_aoi         0.57_p(0.37-0.77)
+    pet_mgu_overall     0.53_p(0.35-0.71)
+    pet_mgu_remote      0.51_p(0.33-0.70)
+    pet_mgu_aoi         0.47_p(0.29-0.66)
+pat_sex==1
+23/39
+    pet_hiber_overall   0.35_p(0.17-0.52)
+    pet_hiber_aoi       0.41_p(0.24-0.58)
+    pet_scar            0.49_p(0.30-0.68)
+    pet_cfr_overall     0.46_p(0.26-0.66)
+    pet_cfr_aoi         0.50_p(0.29-0.71)
+    pet_mgu_overall     0.52_p(0.32-0.72)
+    pet_mgu_remote      0.50_p(0.30-0.71)
+    pet_mgu_aoi         0.48_p(0.27-0.68)
+pat_sex==0
+3/5
+    pet_hiber_overall   0.25_p(0.00-0.77)
+    pet_hiber_aoi       0.25_p(0.00-0.77)
+    pet_scar            0.50_p(0.00-1.00)
+    pet_cfr_overall     0.75_p(0.06-1.00)
+    pet_cfr_aoi         1.00_p(1.00-1.00)
+    pet_mgu_overall     0.50_p(0.00-1.00)
+    pet_mgu_remote      0.67_p(0.01-1.00)
+    pet_mgu_aoi         0.33_p(0.00-0.99)
+pat_dm==1
+7/13
+    pet_hiber_overall   0.31_p(0.00-0.64)
+    pet_hiber_aoi       0.32_p(0.00-0.65)
+    pet_scar            0.79_p(0.51-1.00)
+    pet_cfr_overall     0.33_p(0.00-0.71)
+    pet_cfr_aoi         0.42_p(0.00-0.88)
+    pet_mgu_overall     0.76_p(0.43-1.00)
+    pet_mgu_remote      0.76_p(0.43-1.00)
+    pet_mgu_aoi         0.62_p(0.26-0.97)
+pat_dm==0
+19/31
+    pet_hiber_overall   0.36_p(0.15-0.56)
+    pet_hiber_aoi       0.42_p(0.22-0.61)
+    pet_scar            0.37_p(0.17-0.57)
+    pet_cfr_overall     0.54_p(0.31-0.77)
+    pet_cfr_aoi         0.63_p(0.39-0.87)
+    pet_mgu_overall     0.43_p(0.22-0.65)
+    pet_mgu_remote      0.36_p(0.16-0.56)
+    pet_mgu_aoi         0.38_p(0.17-0.60)
+ef_pre_median==0
+11/16
+    pet_hiber_overall   0.48_p(0.15-0.82)
+    pet_hiber_aoi       0.55_p(0.23-0.87)
+    pet_scar            0.42_p(0.01-0.83)
+    pet_cfr_overall     0.69_p(0.35-1.00)
+    pet_cfr_aoi         0.93_p(0.76-1.00)
+    pet_mgu_overall     0.64_p(0.32-0.96)
+    pet_mgu_remote      0.62_p(0.31-0.93)
+    pet_mgu_aoi         0.49_p(0.15-0.84)
+ef_pre_median==1
+15/28
+    pet_hiber_overall   0.29_p(0.09-0.49)
+    pet_hiber_aoi       0.33_p(0.13-0.52)
+    pet_scar            0.47_p(0.24-0.69)
+    pet_cfr_overall     0.44_p(0.19-0.68)
+    pet_cfr_aoi         0.48_p(0.23-0.73)
+    pet_mgu_overall     0.46_p(0.23-0.70)
+    pet_mgu_remote      0.44_p(0.21-0.68)
+    pet_mgu_aoi         0.43_p(0.20-0.66)
+itv_cat==1
+5/9
+    pet_hiber_overall   0.58_p(0.15-1.00)
+    pet_hiber_aoi       0.50_p(0.07-0.93)
+    pet_scar            0.25_p(0.00-0.68)
+    pet_cfr_overall     0.58_p(0.00-1.00)
+    pet_cfr_aoi         0.50_p(0.00-1.00)
+    pet_mgu_overall     0.55_p(0.08-1.00)
+    pet_mgu_remote      0.40_p(0.00-0.89)
+    pet_mgu_aoi         0.45_p(0.00-0.92)
+itv_cat==2
+3/8
+    pet_hiber_overall   0.13_p(0.00-0.44)
+    pet_hiber_aoi       0.20_p(0.00-0.44)
+    pet_scar            0.53_p(0.00-1.00)
+    pet_cfr_overall     0.67_p(0.01-1.00)
+    pet_cfr_aoi         0.93_p(0.75-1.00)
+    pet_mgu_overall     0.47_p(0.00-1.00)
+    pet_mgu_remote      0.40_p(0.00-1.00)
+    pet_mgu_aoi         0.40_p(0.00-1.00)
+itv_cat==3
+3/7
+    pet_hiber_overall   0.12_p(0.00-0.41)
+    pet_hiber_aoi       0.37_p(0.00-0.79)
+    pet_scar            0.25_p(0.00-0.66)
+    pet_cfr_overall     0.78_p(0.29-1.00)
+    pet_cfr_aoi         0.56_p(0.00-1.00)
+    pet_mgu_overall     0.83_p(0.46-1.00)
+    pet_mgu_remote      0.75_p(0.33-1.00)
+    pet_mgu_aoi         0.67_p(0.17-1.00)
+itv_cat==4
+15/20
+    pet_hiber_overall   0.36_p(0.00-0.73)
+    pet_hiber_aoi       0.39_p(0.08-0.70)
+    pet_scar            0.56_p(0.31-0.81)
+    pet_cfr_overall     0.21_p(0.00-0.43)
+    pet_cfr_aoi         0.29_p(0.05-0.53)
+    pet_mgu_overall     0.47_p(0.10-0.83)
+    pet_mgu_remote      0.53_p(0.13-0.93)
+    pet_mgu_aoi         0.48_p(0.10-0.86)
+
+. 
+. frame table: save Output/TabAucByCovars.dta, replace
+file Output/TabAucByCovars.dta saved
+
+. /*
+> frame change table
+> frame drop table
+
+end of do-file
+
+. 
+. ** ROC graphs
+. do 3_FigROC.do
+
+. ***** 3_FigROC.do *****
+. use Data/cohort.dta, clear
+
+. capture: mkdir Output/Roc
+
+. 
+. foreach expvar of global expvars {
+  2.     local label : var label `expvar'
+  3.         
+.         if strpos("`label'", ";") {
+  4.             local title = substr("`label'", 1, strpos("`label'", ";")-1)
+  5.                 local subtitle = substr("`label'", strpos("`label'", ";")+1, .)
+  6.                 local title = `" "`title'" "`subtitle'" "'
+  7.         }
+  8.         else {
+  9.             local title = "`label'"
+ 10.         }
+ 11.         
+.         di `"`expvar' - `label' / `title' "'
+ 12.         global rocopts = `"title(`title', size(3) alignment(top)) rlopts(lcolor(gs6))"'
+ 13.         ** Primary
+.         qui: roctab ef_prim `expvar' , graph name("Prim_`expvar'", replace) $rocopts
+ 14.         qui: graph export "Output/Roc/ROC_Prim_`expvar'${exportformat}" $exportoptions
+ 15.         
+.         local graphs_prim = "`graphs_prim' Prim_`expvar'"
+ 16.         
+.         ** Secondary
+.         qui: roctab ef_sec `expvar' , graph name("Sec_`expvar'", replace) $rocopts
+ 17.         qui: graph export "Output/Roc/ROC_Sec_`expvar'${exportformat}" $exportoptions
+ 18.         
+.         local graphs_sec = "`graphs_sec' Sec_`expvar'"
+ 19. }
+pet_hiber_overall - Hibernating tissue in %;Overall /  "Hibernating tissue in %" "Overall"  
+pet_hiber_aoi - Hibernating tissue in n;Area of intervention * /  "Hibernating tissue in n" "Area of intervention *"  
+pet_scar - Scar tissue in % / Scar tissue in % 
+pet_cfr_overall - Coronary flow reserve;Overall /  "Coronary flow reserve" "Overall"  
+pet_cfr_aoi - Coronary flow reserve;Area of intervention # /  "Coronary flow reserve" "Area of intervention #"  
+pet_mgu_overall - MGU during HEC in µmol/min/100g tissue;Overall /  "MGU during HEC in µmol/min/100g tissue" "Overall"  
+pet_mgu_remote - MGU during HEC in µmol/min/100g tissue;Remote area /  "MGU during HEC in µmol/min/100g tissue" "Remote area"  
+pet_mgu_aoi - MGU during HEC in µmol/min/100g tissue;Area of intervention § /  "MGU during HEC in µmol/min/100g tissue" "Area of intervention §"  
+
+. 
+. di "`graphs_prim'" _n(2) "`graphs_sec'"
+ Prim_pet_hiber_overall Prim_pet_hiber_aoi Prim_pet_scar Prim_pet_cfr_overall Prim_pet_cfr_aoi Prim_pet_mgu_overall Prim_pet_mgu_remote Prim_pet_mgu_aoi
+
+ Sec_pet_hiber_overall Sec_pet_hiber_aoi Sec_pet_scar Sec_pet_cfr_overall Sec_pet_cfr_aoi Sec_pet_mgu_overall Sec_pet_mgu_remote Sec_pet_mgu_aoi
+
+. 
+. *** Combine primary 
+. twoway (), name(empty, replace)
+
+. 
+. foreach outcome in Prim Sec {
+  2.         * Row 1-3
+.         local Graphs_Dynamic    = subinstr("pet_mgu_overall pet_mgu_aoi pet_mgu_remote", "pet_", "`outcome'_pet_", .)
+  3.         local Graphs_Static     = subinstr("pet_hiber_overall pet_hiber_aoi pet_scar", "pet_", "`outcome'_pet_", .)
+  4.         local Graphs_Perfusion  = subinstr("pet_cfr_overall pet_cfr_aoi empty", "pet_", "`outcome'_pet_", .)
+  5.         
+.         foreach cat in Dynamic Static Perfusion {
+  6.                 graph combine `Graphs_`cat'' ///
+>                         , row(1) l1title("`cat'") name(`cat', replace) 
+  7.         }
+  8.         
+.         graph combine Dynamic Static Perfusion, col(1) iscale(0.52)
+  9.         graph export Output/ROC_`outcome'_Combined${exportformat} $exportoptions
+ 10.         graph export Output/ROC_`outcome'_Combined${exportvector}
+ 11. }
+(file Output/ROC_Prim_Combined.png written in PNG format)
+(file Output/ROC_Prim_Combined.pdf written in PDF format)
+(file Output/ROC_Sec_Combined.png written in PNG format)
+(file Output/ROC_Sec_Combined.pdf written in PDF format)
+
+. 
+end of do-file
+
+. 
+. ** Survival analysis
+. do 3_FigSurvByHiber.do
+
+. ***** 3_FigSurvByHiber.do *****
+. frame reset
+
+. putdocx clear
+
+. putdocx begin
+
+. 
+. local format = `"base cformat("%4.3f") pformat("%4.3f") sformat("%4.3f")"'
+
+. putdocx paragraph, style(Heading1)
+
+. putdocx text ("Survival analysis")
+
+. 
+. 
+. *** Prepare data
+. use Data/cohort_wexcl.dta, clear
+
+. 
+. gen date_event =date_death if death==1
+(100 missing values generated)
+
+. replace date_event = date_cens if death==0
+(100 real changes made)
+
+. format %d date_event
+
+. 
+. qui: su pet_hiber_overall, detail
+
+. local label1 = "Below median (0-`r(p50)'%)"
+
+. local label2 = "Median or above (`r(p50)'-`r(max)'%)"
+
+. recode pet_hiber_overall ///
+>         (`r(p50)'/max=1 "`label2'") ///
+>         (0/`r(p50)'=0 "`label1'") ///
+>         , gen(hiber_simple)
+(94 differences between pet_hiber_overall and hiber_simple)
+
+. 
+. tab hiber_simple itv, mi
+
+            RECODE of |
+    pet_hiber_overall |
+  (Hibernating tissue |     Intervention
+        in %;Overall) | No interv  Intervent |     Total
+----------------------+----------------------+----------
+  Below median (0-2%) |        46         18 |        64 
+Median or above (2-22 |        41         26 |        67 
+----------------------+----------------------+----------
+                Total |        87         44 |       131 
+
+. 
+. 
+. *** Survival in ITV group
+. putdocx paragraph, style(Heading2)
+
+. putdocx text ("Intervention group only")
+
+. 
+. stset date_event if itv==1 ///
+>         , origin(time date_itv) ///
+>         failure(death==1) scale(365.25)
+
+     failure event:  death == 1
+obs. time interval:  (origin, date_event]
+ exit on or before:  failure
+    t for analysis:  (time-origin)/365.25
+            origin:  time date_itv
+            if exp:  itv==1         
+
+------------------------------------------------------------------------------
+        131  total observations
+         87  ignored at outset because of -if <exp>-
+------------------------------------------------------------------------------
+         44  observations remaining, representing
+          7  failures in single-record/single-failure data
+    140.693  total analysis time at risk and under observation
+                                                at risk from t =         0
+                                     earliest observed entry t =         0
+                                          last observed exit t =  4.788501
+
+. 
+. * Graph
+. sts graph, by(hiber_simple) ///
+>         legend(pos(6) ring(0)) ///
+>         title("Figure A" "Intervention group") ///
+>         ytitle("Survival") ///
+>         xtitle("Years after intervention") ///
+>         tmax(5) ///
+>         legend(order(1 "`label1'" 2 "`label2'")) ///
+>         risktable  risktable(, order(1 "`label1'" 2 "`label2'") size(small) title(At risk)) ///
+>         plot1opts(lcolor(black) lwidth(0.5)) ///
+>         plot2opts(lcolor(gs9) lwidth(0.5) lpattern(-)) ///
+>         name(itv, replace)
+
+         failure _d:  death == 1
+   analysis time _t:  (date_event-origin)/365.25
+             origin:  time date_itv
+
+. 
+. graph export "Output/SurvByHiber_ITV${exportformat}" $exportoptions
+(file Output/SurvByHiber_ITV.png written in PNG format)
+
+. graph export Output/SurvByHiber_ITV${exportvector}
+(file Output/SurvByHiber_ITV.pdf written in PDF format)
+
+. 
+. * Cox
+. stphplot, by(hiber_simple) name(logminuslog_itv, replace) title(Intervention patients only)
+
+         failure _d:  death == 1
+   analysis time _t:  (date_event-origin)/365.25
+             origin:  time date_itv
+
+. stcox ib0.hiber_simple, `format'
+
+         failure _d:  death == 1
+   analysis time _t:  (date_event-origin)/365.25
+             origin:  time date_itv
+
+Iteration 0:   log likelihood = -25.234088
+Iteration 1:   log likelihood =  -24.93056
+Iteration 2:   log likelihood = -24.929091
+Iteration 3:   log likelihood = -24.929091
+Refining estimates:
+Iteration 0:   log likelihood = -24.929091
+
+Cox regression -- no ties
+
+No. of subjects =           44                  Number of obs    =          44
+No. of failures =            7
+Time at risk    =  140.6926762
+                                                LR chi2(1)       =        0.61
+Log likelihood  =   -24.929091                  Prob > chi2      =      0.4348
+
+------------------------------------------------------------------------------------------
+                      _t | Haz. Ratio   Std. Err.      z    P>|z|     [95% Conf. Interval]
+-------------------------+----------------------------------------------------------------
+            hiber_simple |
+    Below median (0-2%)  |      1.000  (base)
+Median or above (2-22%)  |      1.877      1.572    0.752   0.452        0.364       9.688
+------------------------------------------------------------------------------------------
+
+. putdocx table tbl1=etable
+
+. 
+. * Log rank
+. sts test hiber_simple, logrank
+
+         failure _d:  death == 1
+   analysis time _t:  (date_event-origin)/365.25
+             origin:  time date_itv
+
+
+Log-rank test for equality of survivor functions
+
+                        |   Events         Events
+hiber_simple            |  observed       expected
+------------------------+-------------------------
+Below median (0-2%)     |         2           3.00
+Median or above (2-22%) |         5           4.00
+------------------------+-------------------------
+Total                   |         7           7.00
+
+                              chi2(1) =       0.58
+                              Pr>chi2 =     0.4448
+
+. 
+. 
+. *** Survival in all patients
+. putdocx paragraph, style(Heading2)
+
+. putdocx text ("All patients, including those without intervention")
+
+. 
+. stset date_event ///
+>         , origin(time date_scan) ///
+>         failure(death==1) scale(365.25)
+
+     failure event:  death == 1
+obs. time interval:  (origin, date_event]
+ exit on or before:  failure
+    t for analysis:  (time-origin)/365.25
+            origin:  time date_scan
+
+------------------------------------------------------------------------------
+        131  total observations
+          0  exclusions
+------------------------------------------------------------------------------
+        131  observations remaining, representing
+         31  failures in single-record/single-failure data
+    437.005  total analysis time at risk and under observation
+                                                at risk from t =         0
+                                     earliest observed entry t =         0
+                                          last observed exit t =  5.360712
+
+. 
+. * Graph
+. sts graph, by(hiber_simple) ///
+>         legend(pos(6) ring(0)) ///
+>         title("Figure B" "All patients") ///
+>         ytitle("Survival") ///
+>         xtitle("Years after PET scan") ///
+>         tmax(5) ///
+>         legend(order(1 "`label1'" 2 "`label2'")) ///
+>         risktable  risktable(, order(1 "`label1'" 2 "`label2'") size(small) title(At risk)) ///
+>         plot1opts(lcolor(black) lwidth(0.5)) ///
+>         plot2opts(lcolor(gs9) lwidth(0.5) lpattern(-)) ///
+>         name(all, replace)
+
+         failure _d:  death == 1
+   analysis time _t:  (date_event-origin)/365.25
+             origin:  time date_scan
+
+. 
+. graph export "Output/SurvByHiber_All${exportformat}" $exportoptions
+(file Output/SurvByHiber_All.png written in PNG format)
+
+. graph export Output/SurvByHiber_All${exportvector}
+(file Output/SurvByHiber_All.pdf written in PDF format)
+
+. 
+. * Cox
+. stphplot, by(hiber_simple) name(logminuslog_all, replace) title(All patients)
+
+         failure _d:  death == 1
+   analysis time _t:  (date_event-origin)/365.25
+             origin:  time date_scan
+
+. stcox ib0.hiber_simple, `format'
+
+         failure _d:  death == 1
+   analysis time _t:  (date_event-origin)/365.25
+             origin:  time date_scan
+
+Iteration 0:   log likelihood =  -143.9597
+Iteration 1:   log likelihood = -143.57307
+Iteration 2:   log likelihood = -143.57303
+Refining estimates:
+Iteration 0:   log likelihood = -143.57303
+
+Cox regression -- no ties
+
+No. of subjects =          131                  Number of obs    =         131
+No. of failures =           31
+Time at risk    =  437.0047912
+                                                LR chi2(1)       =        0.77
+Log likelihood  =   -143.57303                  Prob > chi2      =      0.3792
+
+------------------------------------------------------------------------------------------
+                      _t | Haz. Ratio   Std. Err.      z    P>|z|     [95% Conf. Interval]
+-------------------------+----------------------------------------------------------------
+            hiber_simple |
+    Below median (0-2%)  |      1.000  (base)
+Median or above (2-22%)  |      1.375      0.501    0.874   0.382        0.673       2.807
+------------------------------------------------------------------------------------------
+
+. putdocx table tbl1=etable
+(note: table tbl1 has been redefined)
+
+. 
+. * Log rank
+. sts test hiber_simple, logrank
+
+         failure _d:  death == 1
+   analysis time _t:  (date_event-origin)/365.25
+             origin:  time date_scan
+
+
+Log-rank test for equality of survivor functions
+
+                        |   Events         Events
+hiber_simple            |  observed       expected
+------------------------+-------------------------
+Below median (0-2%)     |        13          15.44
+Median or above (2-22%) |        18          15.56
+------------------------+-------------------------
+Total                   |        31          31.00
+
+                              chi2(1) =       0.77
+                              Pr>chi2 =     0.3803
+
+. 
+. 
+. *** Export results
+. * KM plots
+. graph combine itv all, col(1) ysize(21.0cm) xsize(14.8cm)
+
+. graph export "Output/SurvByHiber_Comb${exportformat}" $exportoptions
+(file Output/SurvByHiber_Comb.png written in PNG format)
+
+. graph export Output/SurvByHiber_Comb${exportvector}
+(file Output/SurvByHiber_Comb.pdf written in PDF format)
+
+. 
+. * Log-log plots
+. graph combine logminuslog_all logminuslog_itv, col(2) ysize(14.8cm) xsize(21.0cm)
+
+. graph export "Output/SurvLogMinusLog${exportformat}" $exportoptions
+(file Output/SurvLogMinusLog.png written in PNG format)
+
+. putdocx paragraph, style(Heading2)
+
+. putdocx text ("Checking assumptions: Log-minus-log plots")
+
+. putdocx paragraph
+
+. putdocx image "Output/SurvLogMinusLog${exportformat}"
+
+. 
+. 
+. putdocx save "Output/TextSurv", replace
+successfully replaced "C:/Users/au335571/Forskning/2020-PET-predict-EF-after-Revasc_TVL/Output/TextSurv.docx"
+
+. 
+end of do-file
+
+. 
+. ** AoI and area of hibernation
+. do 3_TabAoiAndHiber.do
+
+. ***** 3_TabAoiAndHiber.do *****
+. use Data/cohort_wexcl.dta, clear
+
+. 
+. 
+. *** Prepary intervention and hibernating group vars
+. 
+. ** Hibernation
+. su pet_hiberseg_n_*
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+pet_hibers~d |        131    .7938931    1.428919          0          7
+pet_hibers~x |        131    .7251908    1.221937          0          5
+pet_hibers~a |        131    .8320611    1.295867          0          5
+
+. 
+. * Gen indicator vars
+. foreach var in LAD LCx RCA {
+  2.         local lower = lower("`var'")
+  3.         recode pet_hiberseg_n_`lower' (1/7=1 "`var'" ) (0=0 " " ), gen(hiberany_`lower') label(hiberany_`lower'_)
+  4. }
+(25 differences between pet_hiberseg_n_lad and hiberany_lad)
+(27 differences between pet_hiberseg_n_lcx and hiberany_lcx)
+(31 differences between pet_hiberseg_n_rca and hiberany_rca)
+
+. 
+. * Combine to group var
+. gen hiber_group = 8             if hiberany_lad==0 & hiberany_lcx==0 & hiberany_rca==0 // None 
+(75 missing values generated)
+
+. recode hiber_group (.=1)        if hiberany_lad==1 & hiberany_lcx==0 & hiberany_rca==0 // LAD
+(hiber_group: 13 changes made)
+
+. recode hiber_group (.=2)        if hiberany_lad==0 & hiberany_lcx==1 & hiberany_rca==0 // LCx
+(hiber_group: 3 changes made)
+
+. recode hiber_group (.=3)        if hiberany_lad==0 & hiberany_lcx==0 & hiberany_rca==1 // RCA
+(hiber_group: 10 changes made)
+
+. 
+. recode hiber_group (.=4)        if hiberany_lad==1 & hiberany_lcx==1 & hiberany_rca==0 // LAD+LCx
+(hiber_group: 7 changes made)
+
+. recode hiber_group (.=5)        if hiberany_lad==1 & hiberany_lcx==0 & hiberany_rca==1 // LAD+RCA
+(hiber_group: 7 changes made)
+
+. recode hiber_group (.=6)        if hiberany_lad==0 & hiberany_lcx==1 & hiberany_rca==1 // LCx+RCA
+(hiber_group: 13 changes made)
+
+. 
+. recode hiber_group (.=7)        if hiberany_lad==1 & hiberany_lcx==1 & hiberany_rca==1 // LAD+LCx+RCA
+(hiber_group: 22 changes made)
+
+. 
+. label define hiber_group_ ///
+>                 1 "LAD" ///
+>                 2 "LCx" ///
+>                 3 "RCA" ///
+>                 4 "LAD LCx" ///
+>                 5 "LAD RCA" ///
+>                 6 "LCx RCA" ///
+>                 7 "LAD LCx RCA" ///
+>                 8 "None" ///
+>                 , replace
+
+. label value hiber_group hiber_group_             
+
+. 
+. 
+. ** Intervention
+. su itv_lad itv_lcx itv_rca
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+     itv_lad |         44    .6363636    .4866071          0          1
+     itv_lcx |         44    .5454545    .5036862          0          1
+     itv_rca |         44    .3636364    .4866071          0          1
+
+. 
+. * Combine to group var
+. gen itv_group = 8               if itv_lad==0 & itv_lcx==0 & itv_rca==0 | itv_n==0 // None 
+(44 missing values generated)
+
+. recode itv_group (.=1)  if itv_lad==1 & itv_lcx==0 & itv_rca==0 // LAD
+(itv_group: 9 changes made)
+
+. recode itv_group (.=2)  if itv_lad==0 & itv_lcx==1 & itv_rca==0 // LCx
+(itv_group: 8 changes made)
+
+. recode itv_group (.=3)  if itv_lad==0 & itv_lcx==0 & itv_rca==1 // RCA
+(itv_group: 7 changes made)
+
+. 
+. recode itv_group (.=4)  if itv_lad==1 & itv_lcx==1 & itv_rca==0 // LAD+LCx
+(itv_group: 11 changes made)
+
+. recode itv_group (.=5)  if itv_lad==1 & itv_lcx==0 & itv_rca==1 // LAD+RCA
+(itv_group: 4 changes made)
+
+. recode itv_group (.=6)  if itv_lad==0 & itv_lcx==1 & itv_rca==1 // LCx+RCA
+(itv_group: 1 changes made)
+
+. 
+. recode itv_group (.=7)  if itv_lad==1 & itv_lcx==1 & itv_rca==1 // LAD+LCx+RCA
+(itv_group: 4 changes made)
+
+. 
+. label define itv_group_ ///
+>                 1 "LAD" ///
+>                 2 "LCx" ///
+>                 3 "RCA" ///
+>                 4 "LAD_LCx" ///
+>                 5 "LAD_RCA" ///
+>                 6 "LCx_RCA" ///
+>                 7 "LAD_LCx_RCA" ///
+>                 8 "None" ///
+>                 , replace
+
+. label value itv_group itv_group_                 
+
+. 
+. 
+. *** Gen empty obs for non-observed categories (for contract)
+. foreach var in hiber_group itv_group {
+  2.         forvalues cat = 1/8 {
+  3.                 qui: count if `var'==`cat'
+  4.                 if `r(N)'==0 {
+  5.                     local label : label (`var') `cat'
+  6.                         di "`var':" _col(15) "`label' (n=`r(N)')"
+  7.                         newrow
+  8.                         recode `var' (.=`cat') if _n==_N
+  9.                 }
+ 10.         }
+ 11. }
+
+. 
+. 
+. *** Contract and reshape
+. contract itv_group hiber_group, zero freq(_)
+
+. drop if mi(hiber_group) | mi(itv_group) // empty obs generated above
+(0 observations deleted)
+
+. 
+. decode itv_group, gen(col)
+
+. drop itv_group
+
+. reshape wide _, i(hiber_group) j(col) string
+(note: j = LAD LAD_LCx LAD_LCx_RCA LAD_RCA LCx LCx_RCA None RCA)
+
+Data                               long   ->   wide
+-----------------------------------------------------------------------------
+Number of obs.                       64   ->       8
+Number of variables                   3   ->       9
+j variable (8 values)               col   ->   (dropped)
+xij variables:
+                                      _   ->   _LAD _LAD_LCx ... _RCA
+-----------------------------------------------------------------------------
+
+. 
+. 
+. *** Format to table
+. gen sort = _n, before(hiber_group)
+
+. newrow
+
+. recode sort (.=0)
+(sort: 1 changes made)
+
+. sort sort
+
+. 
+. * Rowname
+. decode hiber_group, gen(rowname)
+
+. order sort hiber_group rowname
+
+. 
+. * Column names
+. ds _*
+_LAD          _LAD_LCx      _LAD_LCx_RCA  _LAD_RCA      _LCx          _LCx_RCA      _None         _RCA
+
+. foreach var in `r(varlist)' {
+  2.         * Remove leading _
+.         local newvar = substr("`var'", 2, .)
+  3.         rename `var' `newvar'
+  4.         
+.         * Tostring and colname
+.         tostring `newvar', replace
+  5.         replace `newvar' = subinstr("`newvar'", "_", " ", .) if sort==0
+  6. }
+LAD was byte now str1
+variable LAD was str1 now str3
+(1 real change made)
+LAD_LCx was byte now str1
+variable LAD_LCx was str1 now str7
+(1 real change made)
+LAD_LCx_RCA was byte now str1
+variable LAD_LCx_RCA was str1 now str11
+(1 real change made)
+LAD_RCA was byte now str1
+variable LAD_RCA was str1 now str7
+(1 real change made)
+LCx was byte now str1
+variable LCx was str1 now str3
+(1 real change made)
+LCx_RCA was byte now str1
+variable LCx_RCA was str1 now str7
+(1 real change made)
+None was byte now str2
+variable None was str2 now str4
+(1 real change made)
+RCA was byte now str1
+variable RCA was str1 now str3
+(1 real change made)
+
+. 
+. 
+. order LAD LCx RCA LAD_LCx LAD_RCA LCx_RCA LAD_LCx_RCA, after(rowname)
+
+. 
+. * Headers
+. newrow
+
+. recode sort (.=-1)
+(sort: 1 changes made)
+
+. sort sort
+
+. replace rowname = "Areas of hibernation" if sort==-1
+variable rowname was str11 now str20
+(1 real change made)
+
+. replace LAD = "Areas of intervention" if sort==-1
+variable LAD was str3 now str21
+(1 real change made)
+
+. 
+. * Export
+. save Output/TabAoiAndHiber.dta, replace
+file Output/TabAoiAndHiber.dta saved
+
+. 
+end of do-file
+
+. 
+. ** Miscellaneous
+. do 3_TextMisc.do
+
+. ***** 3_TextMisc.do *****
+. frame reset
+
+. putdocx clear
+
+. putdocx begin
+
+. 
+. 
+. *** Chi2 for hibernation vs intervention
+. putdocx paragraph, style(Heading2)
+
+. putdocx text ("Test for difference hibernation (some/none) vs intervention (yes/no)")
+
+. 
+. use Data/cohort_wexcl.dta, clear
+
+. recode pet_hiber_overall (0=0 "No hibernation (0%)") (1/max=1 "Some hibernation (1-22%)"), gen(hiber_simple)
+(67 differences between pet_hiber_overall and hiber_simple)
+
+. 
+. * Table
+. addtab_setup, frame(table) columnvar(itv)
+Column_0: No intervention
+Column_1: Intervention
+
+. qui: addtab_no if hiber_simple==1, colpercent var(hiber_simple) rowname("Some hibernation (1-22%)")
+
+. qui: addtab_no if hiber_simple==0, colpercent var(hiber_simple) rowname("No hibernation (0%)")
+
+. frame table: putdocx table tbl=data(rowname col_0 col_1)
+
+. 
+. * Fishers exact
+. tab hiber_simple itv, exact
+
+            RECODE of |
+    pet_hiber_overall |
+  (Hibernating tissue |     Intervention
+        in %;Overall) | No interv  Intervent |     Total
+----------------------+----------------------+----------
+  No hibernation (0%) |        25         12 |        37 
+Some hibernation (1-2 |        62         32 |        94 
+----------------------+----------------------+----------
+                Total |        87         44 |       131 
+
+           Fisher's exact =                 1.000
+   1-sided Fisher's exact =                 0.516
+
+. putdocx paragraph
+
+. local pval = string(round(`r(p_exact)', 0.01), "%4.2f")
+
+. putdocx text (`"Using Fishers exact text to test for a difference in the 2x2 table results in a p-value of `pval'"'), linebreak
+
+. 
+. * Ranksum
+. ranksum pet_hiber_overall, by(itv)
+
+Two-sample Wilcoxon rank-sum (Mann-Whitney) test
+
+         itv |      obs    rank sum    expected
+-------------+---------------------------------
+No intervent |       87        5427        5742
+Intervention |       44        3219        2904
+-------------+---------------------------------
+    combined |      131        8646        8646
+
+unadjusted variance    42108.00
+adjustment for ties    -1431.51
+                     ----------
+adjusted variance      40676.49
+
+Ho: pet_hi~l(itv==No intervention) = pet_hi~l(itv==Intervention)
+             z =  -1.562
+    Prob > |z| =   0.1183
+    Exact Prob =   0.1192
+
+. local pval = string(round(`r(p_exact)', 0.01), "%4.2f")
+
+. putdocx text (`"Using Wilcoxon rank-sum test to test for a difference in hibernation (as a continuous variable) between the two groups results in a p-value
+>  of `pval' (same p-value as in the supplementary table)"'), linebreak
+
+. 
+. 
+. *** Export
+. putdocx save Output/TextMisc, replace
+successfully replaced "C:/Users/au335571/Forskning/2020-PET-predict-EF-after-Revasc_TVL/Output/TextMisc.docx"
+
+. 
+end of do-file
+
+. 
+. 
+. ***** 4) REPORT
+. /*
+> This section:
+> - Defines layout of reports
+> - Combines results into Figures & Tables, Supplementary, Miscellaneous results for text, and analyses not presented in manuscript.
+> - Adds headers and footnotes to graphs and tables
+> */
+. do 4_Report.do
+
+. ***** 4_Report.do *****
+. /*
+> First part defines layout for headings, figures, tables and footnotes
+> Second part export results to report
+> */
+. frame reset
+
+. clear
+
+. putdocx clear
+
+. file close _all
+
+. 
+. 
+. 
+. *** Define standard layout
+. ** Heading1
+. capture: program drop text_heading1
+
+. program define text_heading1
+  1. syntax, text(string) [sectionbreak *]
+  2. 
+. if !mi("`sectionbreak'") {
+  3.         putdocx sectionbreak, $pagelayout `options'
+  4. }
+  5. 
+. putdocx paragraph, style(Heading1) font("Times new roman", 15, black)
+  6. putdocx text (`"`text'"')
+  7. end
+
+. 
+. ** Heading2
+. capture: program drop text_heading2
+
+. program define text_heading2
+  1. syntax, text(string) [sectionbreak *]
+  2. 
+. if !mi("`sectionbreak'") {
+  3.         putdocx sectionbreak, $pagelayout `options'
+  4. }
+  5. 
+. putdocx paragraph, style(Heading2) font("Times new roman", 13, black)
+  6. putdocx text (`"`text'"')
+  7. end
+
+. 
+. ** Figure
+. capture: program drop text_fig
+
+. program define text_fig
+  1. syntax, image(string) [*]
+  2. 
+. putdocx paragraph, halign(center)
+  3. putdocx image `image', `options'
+  4. end
+
+. 
+. ** Table 
+. capture: program drop text_table
+
+. program define text_table
+  1. syntax, file(string) vars(string) header(numlist) [subheader(string) left(numlist) right(numlist)]
+  2. 
+. capture: frame drop table
+  3. frame create table
+  4. frame table {
+  5.         use "`file'", clear
+  6.         gen n=_n
+  7.         * General settings
+.         putdocx table tbl1 = data("`vars'"), width(100%) layout(autofitcontents) 
+  8.         putdocx table tbl1(., .), border(all, nil) halign(center) valign(center) font("Times new roman", 10, black)
+  9.         * Header
+.         putdocx table tbl1(`header', .), bold shading(191 191 191) // Header gray and bold
+ 10.         * Alignment
+.         if !mi("`left'") {
+ 11.                 putdocx table tbl1(., `left'), halign(left)
+ 12.         }
+ 13.         if !mi("`right'") {
+ 14.                 putdocx table tbl1(., `right'), halign(right)
+ 15.         }
+ 16.         * Subheaders
+.         if !mi("`subheader'") {
+ 17.                 levelsof n `subheader'
+ 18.                 putdocx table tbl1(`r(levels)', .), shading(217 217 217) // Subheader light gray
+ 19.         }
+ 20.         * Lines
+.         qui: su n
+ 21.         putdocx table tbl1(`r(max)', .), border(bottom, single, black, 1)
+ 22. }
+ 23. end
+
+. 
+. ** Define abbreviations
+. frame create abbrev 
+
+. frame abbrev {
+.     input str15 abbrev str80 meaning
+
+              abbrev                                                                           meaning
+  1.         "Abbreviations" "Meaning"
+  2.         "AUC"   "area under the curve"
+  3.         "CABG"  "coronary artery bypass grafting"
+  4.         "CTO"   "chronic total occlusion"
+  5.         "EF"    "ejection fraction"
+  6.         "FDG PET/CT"    "18F-fluorodeoxyglucose positron emission tomography/computed tomography"
+  7.         "HEC"   "hyperinsulinemic euglycemic clamp"
+  8.         "IQR"   "inter-quartile range (25th to 75th percentile)"
+  9.         "LAD"   "left anterior descendent artery"
+ 10.         "LCx"   "left circumflex artery"
+ 11.         "MGU"   "myocardial glucose uptake"
+ 12.         "PCI"   "percutaneous coronary intervention"
+ 13.         "RCA"   "right coronary artery"
+ 14.         "ROC"   "receiver operator curve"
+ 15.         "SD"    "standard deviation"
+ 16.         end
+.         save Output/Abbreviations.dta, replace
+file Output/Abbreviations.dta saved
+.         replace abbrev = subinstr(abbrev, " ", "_", .)
+(1 real change made)
+.         gen n=_n
+. }
+
+. 
+. ** Footnote
+. capture: program drop text_footnote
+
+. program define text_footnote
+  1. syntax, [notes(string) linebreak ABBREViations(string)]
+  2. 
+. putdocx paragraph, font("Times new roman", 10, black)
+  3. 
+. if !mi(`"`abbreviations'"') {
+  4.         local abbrevtext = ""
+  5.         
+.         * Lookup abbrev
+.         foreach abbrev in `abbreviations' {
+  6.             frame abbrev {
+  7.                     qui: su n if abbrev=="`abbrev'"
+  8.                         if `r(N)'==0 { // Unknown abbrev
+  9.                             di as error "`abbrev' is an unknown abbreviations"
+ 10.                                 error 1
+ 11.                         }
+ 12.                         else {
+ 13.                             local meaning = meaning[`r(min)']
+ 14.                         }       
+ 15.                 }
+ 16.                 local abbrev2 = subinstr("`abbrev'", "_", " ", .)
+ 17.                 local abbrevtext = "`abbrevtext'`abbrev2', `meaning'; "
+ 18.         }
+ 19.         
+.         * Remove last ; and add .
+.         local abbrevtext = substr("`abbrevtext'", 1, length("`abbrevtext'")-2) + ". "
+ 20.         di "`abbrevtext'"
+ 21.         * Add to footnote
+.         putdocx text ("Abbreviations:"), bold
+ 22.         putdocx text (`" `abbrevtext'"'), `linebreak'
+ 23. }
+ 24. if !mi(`"`notes'"') {
+ 25.         putdocx text ("Notes:"), bold
+ 26.         putdocx text (`" `notes'"')
+ 27. }
+ 28. end
+
+. 
+. 
+. 
+. *** Export report
+. ** Setup document
+. global pagelayout = `"pagenum(decimal)"' /// 
+>         + `" footer(pfooter)"' ///
+>         + `" pagesize(A4)"' ///
+>         + `" margin(left, 1 in)"' ///
+>         + `" margin(right, 1 in)"' //
+
+. 
+. putdocx begin, $pagelayout
+
+.         
+. putdocx paragraph, tofooter(pfooter)
+
+. putdocx text ("Page ")
+
+. putdocx pagenumber, bold
+
+. putdocx text (" of ")
+
+. putdocx pagenumber, totalpages bold
+
+. 
+. 
+. ** Abbreviations
+. text_heading1, text("Abbreviations") 
+
+. text_table, file("Output/Abbreviations.dta") vars(abbrev meaning) header(1) left(1 2)
+
+. 
+. 
+. ** Figures
+. text_heading1, text("Figures") sectionbreak
+
+. 
+. * Fig 1
+. text_heading2, text("Figure 1 - Patient flow diagram") 
+
+. text_fig, image(Input/FlowFig.png) height(5)
+
+. text_footnote, abbrev("FDG_PET/CT") ///
+>         linebreak ///
+>         notes("Flow diagram showing the inclusion of patients from the 131 who were referred to the Department of Nuclear Medicine & PET-Centre to undergo 
+> cardiac viability PET/CT.")
+FDG PET/CT, 18F-fluorodeoxyglucose positron emission tomography/computed tomography. 
+
+. 
+. * Fig 2
+. text_heading2, text("Figure 2 - Example of a dynamic cardiac PET scan") 
+
+. text_fig, image(Input/placeholder.png) height(5)
+
+. text_footnote, notes("Insert footnotes.")
+
+. 
+. * Fig 3
+. text_heading2, text("Figure 3 - ROC curves of pre-intervention dynamic (MGU), static (hibernation), and perfusion PET measures for predicting LVEF-improvem
+> ent of 5% or above")
+
+. text_fig, image(Output/ROC_Prim_Combined.png) width(7.5 in)
+
+. text_footnote, ///
+>         abbrev("EF HEC MGU ROC") ///
+>         linebreak ///
+>         notes("* # § See table 1 footnotes.") 
+EF, ejection fraction; HEC, hyperinsulinemic euglycemic clamp; MGU, myocardial glucose uptake; ROC, receiver operator curve. 
+
+. 
+. * Fig 4
+. text_heading2, text("Figure 4 - Hibernating tissue and survival") 
+
+. text_fig, image(Output/SurvByHiber_Comb.png)
+
+. text_footnote, notes("Kaplan-Meier survival curves by hibernation % (above versus below median) for the included patients who underwent intervention (A) an
+> d for all patients (B). Follow-up started at date of intervention (A) and date of PET scan (B), respectively. Number of patients at risk are shown below ea
+> ch figure. ")
+
+. 
+. 
+. ** Tables
+. text_heading1, text("Tables") sectionbreak
+
+. 
+. * Tab 1
+. text_heading2, text("Table 1 - Baseline patient characteristics")
+
+. text_table, file("Output/TabPatCharByEF.dta") vars(rowname col_total) ///
+>         header(1) left(1) ///
+>         subheader(`"if varname=="BOLD""')
+(note: table tbl1 has been redefined)
+3 14 27
+
+. text_footnote, ///
+>         notes("Values are shown as mean (SD), n (%) or median (IQR range 25th to 75th percentile)." ///
+>         "* Number of segments in area of intervention (up to 17) with at least 10% hibernating tissue divided by the number of coronary arteries intervened
+>  upon. Example: 3 hibernating segments in LAD + 1 in RCA / 2 arteries = 2." ///
+>         "# Average coronary flow reserve across the area(s) of intervention." ///
+>         "§ Average myocardial glucose uptake across area(s) of intervention.") ///
+>         linebreak ///
+>         abbrev("CABG CTO HEC IQR LAD LCx PCI RCA SD")
+CABG, coronary artery bypass grafting; CTO, chronic total occlusion; HEC, hyperinsulinemic euglycemic clamp; IQR, inter-quartile range (25th to 75th percenti
+> le); LAD, left anterior descendent artery; LCx, left circumflex artery; PCI, percutaneous coronary intervention; RCA, right coronary artery; SD, standard d
+> eviation. 
+
+. 
+. * Tab 2
+. text_heading2, text("Table 2 - Patient characteristics stratified by LVEF-improvement after revascularizatiion intervention") sectionbreak
+
+. text_table, file("Output/TabPatCharByEF.dta") vars(rowname col_0 col_1 col_pval) ///
+>         header(1) left(1) ///
+>         subheader(`"if varname=="BOLD""')
+(note: table tbl1 has been redefined)
+3 14 27
+
+. text_footnote, ///
+>         notes("P-values for differences were calculated using Fisher's exact test (sex, diabetes, type of intervention, and area of intervention), Student'
+> s t-test (age and ejection-fraction), and Wilcoxon rank-sum test (remaining variables)." ///
+>         "* # § See table 1 footnotes.") ///
+>         linebreak ///
+>         abbrev("CABG CTO HEC IQR LAD LCx PCI RCA SD")
+CABG, coronary artery bypass grafting; CTO, chronic total occlusion; HEC, hyperinsulinemic euglycemic clamp; IQR, inter-quartile range (25th to 75th percenti
+> le); LAD, left anterior descendent artery; LCx, left circumflex artery; PCI, percutaneous coronary intervention; RCA, right coronary artery; SD, standard d
+> eviation. 
+
+.         
+. 
+. ** Save
+. putdocx save "Output/Report_FigTab", replace
+successfully replaced "C:/Users/au335571/Forskning/2020-PET-predict-EF-after-Revasc_TVL/Output/Report_FigTab.docx"
+
+. 
+. 
+. 
+. *** Export supplementary
+. ** Setup document
+. global pagelayout = `"pagenum(decimal)"' /// 
+>         + `" footer(pfooter)"' ///
+>         + `" pagesize(A4)"' ///
+>         + `" margin(left, 1 in)"' ///
+>         + `" margin(right, 1 in)"' //
+
+. 
+. putdocx begin, $pagelayout
+
+.         
+. putdocx paragraph, tofooter(pfooter)
+
+. putdocx text ("Page ")
+
+. putdocx pagenumber, bold
+
+. putdocx text (" of ")
+
+. putdocx pagenumber, totalpages bold
+
+. 
+. text_heading1, text("Report_Supplementary")
+
+. 
+. 
+. * Sup 1
+. text_heading2, text("Supplementary 1 - Patient characteristics for included patients who underwent cardiac intervention and excluded patients who did not")
+
+. text_table, file("Output/TabPatCharExcl.dta") vars(rowname col_1 col_0 col_pval) ///
+>         header(1) left(1) ///
+>         subheader(`"if varname=="BOLD""')
+3 14 27
+
+. text_footnote, notes("* # § See table 1 footnotes in manuscript.") ///
+>         linebreak ///
+>         abbrev("CABG CTO HEC IQR LAD LCx PCI RCA SD")
+CABG, coronary artery bypass grafting; CTO, chronic total occlusion; HEC, hyperinsulinemic euglycemic clamp; IQR, inter-quartile range (25th to 75th percenti
+> le); LAD, left anterior descendent artery; LCx, left circumflex artery; PCI, percutaneous coronary intervention; RCA, right coronary artery; SD, standard d
+> eviation. 
+
+. 
+. * Sup 2
+. text_heading2, text("Supplementary 2 - Areas of intervention compared to areas of hibernation") sectionbreak
+
+. text_table, file("Output/TabAoiAndHiber.dta") vars(rowname LAD-None) ///
+>         header(1 2) left(1) //
+(note: table tbl1 has been redefined)
+
+. putdocx table tbl1(1, 2), colspan(9)
+
+. text_footnote, notes("Table includes both patients who underwent an intervention and those who did not (i.e. intervention 'None'). Dark grey indicate compl
+> ete agreement between hibernating areas on PET scan and areas of intervention, light grey indicate partial agreement, and white indicate no agreement. ") /
+> //
+>         linebreak ///
+>         abbrev("LAD LCx RCA")
+LAD, left anterior descendent artery; LCx, left circumflex artery; RCA, right coronary artery. 
+
+. 
+. ** Save
+. putdocx save "Output/Supplementary", replace
+successfully replaced "C:/Users/au335571/Forskning/2020-PET-predict-EF-after-Revasc_TVL/Output/Supplementary.docx"
+
+. 
+. 
+. 
+. *** Export calculations not presented in paper
+. ** Setup document
+. global pagelayout = `"pagenum(decimal)"' /// 
+>         + `" footer(pfooter)"' ///
+>         + `" pagesize(A4)"' ///
+>         + `" margin(left, 1 in)"' ///
+>         + `" margin(right, 1 in)"' //
+
+. 
+. putdocx begin, $pagelayout
+
+.         
+. putdocx paragraph, tofooter(pfooter)
+
+. putdocx text ("Page ")
+
+. putdocx pagenumber, bold
+
+. putdocx text (" of ")
+
+. putdocx pagenumber, totalpages bold
+
+. 
+. text_heading1, text("Results of various analyses not presented in the paper")
+
+. 
+. * Patient characteristics by diabetes status
+. text_heading2, text("Patient characteristics stratified for diabetes status")
+
+. text_table, file("Output/TabPatCharByDM.dta") vars(rowname col_1 col_0) ///
+>         header(1) left(1) ///
+>         subheader(`"if varname=="BOLD""')
+3 11 24
+
+. text_footnote, notes("Prespecified analysis. Not presented in paper as it did not add any new insights. * # § See table 1 footnotes in manuscript.") ///
+>         linebreak ///
+>         abbrev("CABG CTO HEC IQR LAD LCx PCI RCA SD")
+CABG, coronary artery bypass grafting; CTO, chronic total occlusion; HEC, hyperinsulinemic euglycemic clamp; IQR, inter-quartile range (25th to 75th percenti
+> le); LAD, left anterior descendent artery; LCx, left circumflex artery; PCI, percutaneous coronary intervention; RCA, right coronary artery; SD, standard d
+> eviation. 
+
+. 
+. * AUC subgroup analyses
+. text_heading2, text("ROC AUC sensitivity analysis stratified by patient characteristics") sectionbreak landscape
+
+. text_table, file("Output/TabAucByCovars.dta") vars(rowname no pet_*) ///
+>         header(1) left(1) ///
+>         subheader(`"if varname=="BOLD""')
+(note: table tbl1 has been redefined)
+3 10
+
+. text_footnote, ///
+>         abbrev("EF LAD LCx RCA") ///
+>         linebreak ///
+>         notes("Sensitivity analysis to check if AUC varied by patient characteristics. The analysis was prespecified in statistical analysis plan. The anal
+> ysis is mentioned but not not presented in paper as the analysis did not add any new insights. * # § See table 1 footnotes in manuscript.") 
+EF, ejection fraction; LAD, left anterior descendent artery; LCx, left circumflex artery; RCA, right coronary artery. 
+
+. 
+. * ROC secondary outcome
+. text_heading2, text("ROC curves for predicting LVEF-improvement of 10% or above") sectionbreak
+
+. text_fig, image(Output/ROC_Sec_Combined.png) width(7.5 in)
+
+. text_footnote, ///
+>         abbrev("EF HEC MGU ROC") ///
+>         linebreak ///
+>         notes("Secondary outcome, described but not presented in paper. * # § See table 1 footnotes in manuscript.") 
+EF, ejection fraction; HEC, hyperinsulinemic euglycemic clamp; MGU, myocardial glucose uptake; ROC, receiver operator curve. 
+
+. 
+. ** Save
+. putdocx save "Output/Report_NotPresented", replace
+successfully replaced "C:/Users/au335571/Forskning/2020-PET-predict-EF-after-Revasc_TVL/Output/Report_NotPresented.docx"
+
+. 
+. 
+. 
+. *** Combine misc analyses for text into one file
+. local filelist : dir "Output" files "Text*"
+
+. local filesdir = ""
+
+. foreach file of local filelist {
+  2.         local filesdir = "`filesdir' Output/`file'"
+  3. }
+
+. di "`filesdir'"
+ Output/textmisc.docx Output/textpatientflow.docx Output/textsurv.docx
+
+. putdocx append`filesdir', saving(Output/Report_MiscForText.docx, replace)
+successfully replaced "C:/Users/au335571/Forskning/2020-PET-predict-EF-after-Revasc_TVL/Output/Report_MiscForText.docx"
+
+. 
+end of do-file
+
+. 
+. 
+. frame reset
+
+. file close _all
+
+. window manage close graph _all
+
+. capture: log close

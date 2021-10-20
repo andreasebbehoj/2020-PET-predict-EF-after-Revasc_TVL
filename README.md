@@ -1,5 +1,5 @@
 # 2020-PET-predict-EF-after-Revasc_TVL
-This project contains the analysis for the paper on the predictive values of cardiac PET parameters on the improvement in left ventricular ejection fraction after coronary revascularization procedure by Luong TV et al.
+This project contains the analysis for the paper on the predictive values of cardiac PET parameters on the improvement in left ventricular ejection fraction after coronary revascularization procedure by Luong TV and Ebbehoj A et al.
 
 ## Research question
 We aim to investigate whether PET-scans with <sup>82</sup>Rb and dynamic FDG prior to coronary revascularization procedure can predict improvement of left ventricular EF in patients with ischemic heart failure (:HF). Secondarily, we aim to investigate if the predictive values of the PET parameters differ in these patients depending on diabetes status.
@@ -8,6 +8,41 @@ Patients were recruited as a part of a study on cardiac insulin resistance and s
 
 ## About this repository
 The purpose of this repository is to provide transparency about the analysis and allow other researchers to replicate the analysis. Due to privacy concerns, the original data is NOT available in the repository. Upon request, the corresponding author will detail restrictions to data availability and under which conditions access to some of the data may be provided.
+
+## Instructions
+The analysis is conducted with Stata Statistical Software 16.1 (StataCorp LLC, College Station, TX, USA). The analysis is run in the 'O_Master.do' file.
+
+Folder structure:
+```
+Project folder
+|   README.md
+|   0_Master.do         Runs the entire analysis
+|   1_*.do              Setup Stata, graph layout, and custom programs for tables
+|   2_CohortAndVars.do  Import raw patient files and define variables for analyses
+|   3_*.do              Run analyses, make graphs, and export data for tables
+|   4_Report.do         Combine results, figures, and tables into reports
+|
+|--- Input: Raw files with patient data (hidden due to privacy concerns)
+|    |    Viabdyn_131patients_TVL 2021-04-05.dta
+|
+|--- Data: Prepared files with patient data (hidden due to privacy concerns)
+|    |    cohort.dta                44 patients w intervention
+|    |    cohort_wexcl.dta          All 131 patients w and wo intervention
+|
+|--- Logs: Stata logs from running the analysis
+|    |    20 Oct 2021.log           First submission
+|
+|--- Output: Results from analysis
+     |    Report_FigTab.docx        Figures and tables presented in paper
+     |    Report_MiscForText.docx   Miscellaneous calculations for text in paper and check of assumptions
+     |    Report_NotPresented.docx  Additional results from statistical analysis plan that were not included in final paper
+     |    SurvLogMinusLog.png       Test of assumptions for cox regression
+     |    
+     |--- Qnorm: Qnorm plots for testing assumptions of parametric distribution for t-test
+          |    ByEF_*.png           EF improvement vs no improvement
+          |    ByITV_*.png          Intervention vs no intervention
+          |    ByDM_*.png           Diabetes vs no diabetes
+```
 
 ## Abbreviations
 | Abbreviation | Meaning                                             |
