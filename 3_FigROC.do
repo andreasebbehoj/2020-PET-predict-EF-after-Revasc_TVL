@@ -15,7 +15,7 @@ foreach expvar of global expvars {
 	}
 	
 	di `"`expvar' - `label' / `title' "'
-	global rocopts = `"title(`title', size(3) alignment(top))"'
+	global rocopts = `"title(`title', size(3) alignment(top)) rlopts(lcolor(gs6))"'
 	** Primary
 	qui: roctab ef_prim `expvar' , graph name("Prim_`expvar'", replace) $rocopts
 	qui: graph export "Output/Roc/ROC_Prim_`expvar'${exportformat}" $exportoptions
@@ -46,5 +46,6 @@ foreach outcome in Prim Sec {
 	}
 	
 	graph combine Dynamic Static Perfusion, col(1) iscale(0.52)
-	graph export "Output/ROC_`outcome'_Combined${exportformat}" $exportoptions
+	graph export Output/ROC_`outcome'_Combined${exportformat} $exportoptions
+	graph export Output/ROC_`outcome'_Combined${exportvector}
 }

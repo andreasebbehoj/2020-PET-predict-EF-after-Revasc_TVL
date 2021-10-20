@@ -43,11 +43,12 @@ sts graph, by(hiber_simple) ///
 	tmax(5) ///
 	legend(order(1 "`label1'" 2 "`label2'")) ///
 	risktable  risktable(, order(1 "`label1'" 2 "`label2'") size(small) title(At risk)) ///
-	plot1opts(lcolor(navy) lwidth(0.5)) ///
-	plot2opts(lcolor(gs6) lwidth(0.5) lpattern(-)) ///
+	plot1opts(lcolor(black) lwidth(0.5)) ///
+	plot2opts(lcolor(gs9) lwidth(0.5) lpattern(-)) ///
 	name(itv, replace)
 
 graph export "Output/SurvByHiber_ITV${exportformat}" $exportoptions
+graph export Output/SurvByHiber_ITV${exportvector}
 
 * Cox
 stphplot, by(hiber_simple) name(logminuslog_itv, replace) title(Intervention patients only)
@@ -75,11 +76,12 @@ sts graph, by(hiber_simple) ///
 	tmax(5) ///
 	legend(order(1 "`label1'" 2 "`label2'")) ///
 	risktable  risktable(, order(1 "`label1'" 2 "`label2'") size(small) title(At risk)) ///
-	plot1opts(lcolor(navy) lwidth(0.5)) ///
-	plot2opts(lcolor(gs6) lwidth(0.5) lpattern(-)) ///
+	plot1opts(lcolor(black) lwidth(0.5)) ///
+	plot2opts(lcolor(gs9) lwidth(0.5) lpattern(-)) ///
 	name(all, replace)
 
 graph export "Output/SurvByHiber_All${exportformat}" $exportoptions
+graph export Output/SurvByHiber_All${exportvector}
 
 * Cox
 stphplot, by(hiber_simple) name(logminuslog_all, replace) title(All patients)
@@ -94,6 +96,7 @@ sts test hiber_simple, logrank
 * KM plots
 graph combine itv all, col(1) ysize(21.0cm) xsize(14.8cm)
 graph export "Output/SurvByHiber_Comb${exportformat}" $exportoptions
+graph export Output/SurvByHiber_Comb${exportvector}
 
 * Log-log plots
 graph combine logminuslog_all logminuslog_itv, col(2) ysize(14.8cm) xsize(21.0cm)
