@@ -15,21 +15,12 @@ Due to privacy concerns, the original data is NOT available in the repository. U
   * [Folder structure](#folder-structure)
   * [Abbreviations](#abbreviations)
 - [Statistical analysis plan](#statistical-analysis-plan)
-<<<<<<< HEAD
   * [Exposure variables](#exposure-variables)
   * [Outcome variables](#outcome-variables)
   * [Statistics](#statistics)
   * [Table shells](#table-shells)
   * [Figure layout](#figure-layout)
   * [Change log](#change-log)
-=======
-  * [1) Exposure variables](#1--exposure-variables)
-  * [2) Outcome variables](#2--outcome-variables)
-  * [3) Statistics](#3--statistics)
-  * [4) Table shells](#4--table-shells)
-  * [5) Figure layout](#5--figure-layout)
-  * [6) Change log](#6--change-log)
->>>>>>> c87c115edf05aed8859257034d77f96ca71459a3
     + [Changes before analysis (prespecified)](#changes-before-analysis--prespecified-)
     + [Deviations from SAP after initial analysis (post hoc)](#deviations-from-sap-after-initial-analysis--post-hoc-)
     + [Changes after submission](#changes-after-submission)
