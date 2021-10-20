@@ -1,18 +1,41 @@
 # 2020-PET-predict-EF-after-Revasc_TVL
+
+# About this repository
 This project contains the analysis for the paper on the predictive values of cardiac PET parameters on the improvement in left ventricular ejection fraction after coronary revascularization procedure by Luong TV and Ebbehoj A et al.
+
+The purpose of this repository is to provide transparency about the statistical analysis plan and share the Stata code to allow other researchers to replicate the analysis.
+
+Due to privacy concerns, the original data is NOT available in the repository. Upon request, the corresponding author will detail restrictions to data availability and under which conditions access to some of the data may be provided.
+
+## Table of contents
+- [About this repository](#about-this-repository)
+  * [Table of contents](#table-of-contents)
+  * [Research question](#research-question)
+  * [Instructions](#instructions)
+  * [Folder structure](#folder-structure)
+  * [Abbreviations](#abbreviations)
+- [Statistical analysis plan](#statistical-analysis-plan)
+  * [Exposure variables](#exposure-variables)
+  * [Outcome variables](#outcome-variables)
+  * [Statistics](#statistics)
+  * [Table shells](#table-shells)
+  * [Figure layout](#figure-layout)
+  * [Change log](#change-log)
+    + [Changes before analysis (prespecified)](#changes-before-analysis--prespecified-)
+    + [Deviations from SAP after initial analysis (post hoc)](#deviations-from-sap-after-initial-analysis--post-hoc-)
+    + [Changes after submission](#changes-after-submission)
+
+<small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>
 
 ## Research question
 We aim to investigate whether PET-scans with <sup>82</sup>Rb and dynamic FDG prior to coronary revascularization procedure can predict improvement of left ventricular EF in patients with ischemic heart failure (:HF). Secondarily, we aim to investigate if the predictive values of the PET parameters differ in these patients depending on diabetes status.
 
 Patients were recruited as a part of a study on cardiac insulin resistance and survival in patients with ischemic HF (n=131). Of those, the 44 patients who underwent a successful revascularization procedure were recruited in this study.
 
-## About this repository
-The purpose of this repository is to provide transparency about the analysis and allow other researchers to replicate the analysis. Due to privacy concerns, the original data is NOT available in the repository. Upon request, the corresponding author will detail restrictions to data availability and under which conditions access to some of the data may be provided.
-
 ## Instructions
 The analysis is conducted with Stata Statistical Software 16.1 (StataCorp LLC, College Station, TX, USA). The analysis is run in the 'O_Master.do' file.
 
-Folder structure:
+## Folder structure
 ```
 Project folder
 |   README.md
@@ -66,14 +89,14 @@ Project folder
 
 # Statistical analysis plan
 This section describes the SAP in terms of:
-1. Definitions of exposure variables
-2. Definitions of outcomes
-3. Statistics
-4. Layout of planned tables
-5. Layout of planned figures
-6. Change log
+- Definitions of exposure variables
+- Definitions of outcomes
+- Statistics
+- Layout of planned tables
+- Layout of planned figures
+- Change log
 
-## 1) Exposure variables
+## Exposure variables
 Stationary PET variables to be examined:
 - Scar tissue: Total cardiac scar tissue in % (based on FDG-PET)
 - Hibernating tissue: Hibernating cardiac tissue in %, defined as an area in LAD/LCX/RCA with reduced uptake on (based on rest <sup>82</sup>Rb-PET scan) that is metabolically active (based on FDG-PET)
@@ -89,14 +112,14 @@ Other exposure variables to be examined:
 
 Diabetes status: Including both Type 1 and Type 2 diabetes mellitus (based on medical records).
 
-## 2) Outcome variables
+## Outcome variables
 Primary outcome:
 - Improved EF: defined as EF after cardiac intervention minus EF before intervention >= 5% (measured by echocardiogram)
 
 Secondary outcome:
 - EF improved >=10%
 
-## 3) Statistics
+## Statistics
 Diagnostic value of exposure variables on primary and secondary outcomes will be visualized using receiver operator curves (:ROC).
 
 Area under the curve (:AUC) will be reported for each exposure-outcome combination.
@@ -113,7 +136,7 @@ Patients with missing data on one an exposure variable will be excluded from the
 
 Analyses will be performed in Stata Statistical Software v 16.1 (College Station, Texas 77845 USA) using the *diagt* package ([link](https://ideas.repec.org/c/boc/bocode/s423401.html)).
 
-## 4) Table shells
+## Table shells
 **Table 1** - Patient Characteristics, PET measurements, and Cardiac Status by Diabetes Status
 
 |                                                                           | Total | Diabetics | Non-diabetics |
@@ -216,13 +239,13 @@ Notes: AUC calculated on 5% EF improvement.
 
 
 
-## 5) Figure layout
+## Figure layout
 Figure 1 - ROC Graphs for each Exposure on Improved Ejection Fraction >=5%
 
 Figure 2 - ROC Graphs for each Exposure on Improved Ejection Fraction >=10%
 
 
-## 6) Change log
+## Change log
 This section describes the development of the prespecified SAP (before inspection of data), as well as any later changes to the SAP after inspection of data, reviewer comments, after acceptance, etc.
 The development of the Stata code is documented in GitHub's "commits" section, and will not be described below, unless changes to the code:
 1. are related to changes in the SAP,
@@ -244,8 +267,6 @@ The development of the Stata code is documented in GitHub's "commits" section, a
     - Removed table with secondary outcome (EF improvement >10%), AUC by patient characteristics, and PatChar by DM status as they did not add anything to the analysis.
     - Added survival analysis by PET hibernation
     - Added explanatory figures to manuscript: patient flow figure + example of cardiac PET scan
-
-
 
 ### Changes after submission
 ...
