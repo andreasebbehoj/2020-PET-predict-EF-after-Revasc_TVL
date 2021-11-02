@@ -56,12 +56,12 @@ addtab_estimate, est(p50) par(iqr) var(pet_hiber_aoi) rowname("- Area of interve
 
 addtab_header, varname(GROUPHEADER) rowname("Coronary flow reserve, median (IQR)")
 addtab_estimate, est(p50) par(iqr) var(pet_cfr_overall) rowname("- Overall")
-addtab_estimate, est(p50) par(iqr) var(pet_cfr_aoi) rowname("- Area of intervention #")
+addtab_estimate, est(p50) par(iqr) var(pet_cfr_aoi) rowname("- Area of intervention †")
 
 addtab_header, varname(GROUPHEADER) rowname("Myocardial glucose uptake during in µmol/min/100g tissue, median (IQR)")
 addtab_estimate, est(p50) par(iqr) var(pet_mgu_overall) rowname("- Overall")
 addtab_estimate, est(p50) par(iqr) var(pet_mgu_remote) rowname("- Remote area")
-addtab_estimate, est(p50) par(iqr) var(pet_mgu_aoi) rowname("- Area of intervention §") 
+addtab_estimate, est(p50) par(iqr) var(pet_mgu_aoi) rowname("- Area of intervention ‡") 
 
 
 ** Replace missing values for no intervention

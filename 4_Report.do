@@ -188,12 +188,12 @@ text_fig, image(Output/ROC_Prim_Combined.png) width(7.5 in)
 text_footnote, ///
 	abbrev("EF HEC MGU ROC") ///
 	linebreak ///
-	notes("* # § See table 1 footnotes.") 
+	notes("* † ‡ See table 1 footnotes.") 
 
 * Fig 4
 text_heading2, text("Figure 4 - Hibernating tissue and survival") 
 text_fig, image(Output/SurvByHiber_Comb.png)
-text_footnote, notes("Kaplan-Meier survival curves by hibernation % (above versus below median) for the included patients who underwent intervention (A) and for all patients (B). Follow-up started at date of intervention (A) and date of PET scan (B), respectively. Number of patients at risk are shown below each figure. ")
+text_footnote, notes("Kaplan-Meier survival curves by hibernation % (above versus below median) for the included patients who underwent intervention (a) and for all patients (b). Follow-up started at date of intervention (a) and date of PET scan (b), respectively. Number of patients at risk are shown below each figure. ")
 
 
 ** Tables
@@ -207,8 +207,8 @@ text_table, file("Output/TabPatCharByEF.dta") vars(rowname col_total) ///
 text_footnote, ///
 	notes("Values are shown as mean (SD), n (%) or median (IQR range 25th to 75th percentile)." ///
 	"* Number of segments in area of intervention (up to 17) with at least 10% hibernating tissue divided by the number of coronary arteries intervened upon. Example: 3 hibernating segments in LAD + 1 in RCA / 2 arteries = 2." ///
-	"# Average coronary flow reserve across the area(s) of intervention." ///
-	"§ Average myocardial glucose uptake across area(s) of intervention.") ///
+	"† Average coronary flow reserve across the area(s) of intervention." ///
+	"‡ Average myocardial glucose uptake across area(s) of intervention.") ///
 	linebreak ///
 	abbrev("CABG CTO HEC IQR LAD LCx PCI RCA SD")
 
@@ -219,7 +219,7 @@ text_table, file("Output/TabPatCharByEF.dta") vars(rowname col_0 col_1 col_pval)
 	subheader(`"if varname=="BOLD""')
 text_footnote, ///
 	notes("P-values for differences were calculated using Fisher's exact test (sex, diabetes, type of intervention, and area of intervention), Student's t-test (age and ejection-fraction), and Wilcoxon rank-sum test (remaining variables)." ///
-	"* # § See table 1 footnotes.") ///
+	"* † ‡ See table 1 footnotes.") ///
 	linebreak ///
 	abbrev("CABG CTO HEC IQR LAD LCx PCI RCA SD")
 	
@@ -253,7 +253,7 @@ text_heading2, text("Supplementary 1 - Patient characteristics for included pati
 text_table, file("Output/TabPatCharExcl.dta") vars(rowname col_1 col_0 col_pval) ///
 	header(1) left(1) ///
 	subheader(`"if varname=="BOLD""')
-text_footnote, notes("* # § See table 1 footnotes in manuscript.") ///
+text_footnote, notes("* † ‡ See table 1 footnotes in manuscript.") ///
 	linebreak ///
 	abbrev("CABG CTO HEC IQR LAD LCx PCI RCA SD")
 
@@ -294,7 +294,7 @@ text_heading2, text("Patient characteristics stratified for diabetes status")
 text_table, file("Output/TabPatCharByDM.dta") vars(rowname col_1 col_0) ///
 	header(1) left(1) ///
 	subheader(`"if varname=="BOLD""')
-text_footnote, notes("Prespecified analysis. Not presented in paper as it did not add any new insights. * # § See table 1 footnotes in manuscript.") ///
+text_footnote, notes("Prespecified analysis. Not presented in paper as it did not add any new insights. * † ‡ See table 1 footnotes in manuscript.") ///
 	linebreak ///
 	abbrev("CABG CTO HEC IQR LAD LCx PCI RCA SD")
 
@@ -306,7 +306,7 @@ text_table, file("Output/TabAucByCovars.dta") vars(rowname no pet_*) ///
 text_footnote, ///
 	abbrev("EF LAD LCx RCA") ///
 	linebreak ///
-	notes("Sensitivity analysis to check if AUC varied by patient characteristics. The analysis was prespecified in statistical analysis plan. The analysis is mentioned but not not presented in paper as the analysis did not add any new insights. * # § See table 1 footnotes in manuscript.") 
+	notes("Sensitivity analysis to check if AUC varied by patient characteristics. The analysis was prespecified in statistical analysis plan. The analysis is mentioned but not not presented in paper as the analysis did not add any new insights. * † ‡ See table 1 footnotes in manuscript.") 
 
 * ROC secondary outcome
 text_heading2, text("ROC curves for predicting LVEF-improvement of 10% or above") sectionbreak
@@ -314,7 +314,7 @@ text_fig, image(Output/ROC_Sec_Combined.png) width(7.5 in)
 text_footnote, ///
 	abbrev("EF HEC MGU ROC") ///
 	linebreak ///
-	notes("Secondary outcome, described but not presented in paper. * # § See table 1 footnotes in manuscript.") 
+	notes("Secondary outcome, described but not presented in paper. * † ‡ See table 1 footnotes in manuscript.") 
 
 ** Save
 putdocx save "Output/Report_NotPresented", replace

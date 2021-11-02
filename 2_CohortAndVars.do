@@ -195,7 +195,7 @@ foreach area in lad lcx rca {
 }
 egen sum = rowtotal(cfritv_*), missing
 gen pet_cfr_aoi = sum/itv_n
-label var pet_cfr_aoi "Coronary flow reserve;Area of intervention #"
+label var pet_cfr_aoi "Coronary flow reserve;Area of intervention †"
 drop sum cfritv_*
 
 
@@ -215,7 +215,7 @@ foreach area in lad lcx rca {
 }
 egen sum = rowtotal(mguitv_*), missing
 gen pet_mgu_aoi = sum/itv_n
-label var pet_mgu_aoi "MGU during HEC in µmol/min/100g tissue;Area of intervention §"
+label var pet_mgu_aoi "MGU during HEC in µmol/min/100g tissue;Area of intervention ‡"
 drop sum mguitv_*
 
 
