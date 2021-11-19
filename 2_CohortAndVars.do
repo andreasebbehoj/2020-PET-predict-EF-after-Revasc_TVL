@@ -1,6 +1,19 @@
 ***** 2_CohortAndVars.do *****
+frame reset
+
+*** Load data
 use "Input/Viabdyn_131patients_TVL 2021-04-05.dta", clear
 
+* Add date of post itv EF
+frame create date
+frame date {
+	import excel using "Input/Viabdyn2_45patients 2021-11-09_TVL.xlsx", clear firstrow
+	keep id date_efpost
+	tempfile date
+	save `date', replace
+}
+frame drop date
+merge 1:1 id using `date', assert(match) nogen
 
 
 *** General formatting
@@ -53,6 +66,16 @@ replace datestring = "0" + substr(behdato, 1, 2) + "0" + substr(behdato, 3, 6) i
 gen date_itv = date(datestring, "DMY"), after(behdato)
 format %d date_itv 
 drop datestring datepos
+
+* Date of postITV EF
+replace date_efpost = trim(subinstr(date_efpost, ".", "", 1))
+assert length(date_efpost)==10 | mi(date_efpost)
+gen d = date(date_efpost, "DMY")
+drop date_efpost
+rename d date_efpost
+format %d date_efpost
+label var date_efpost "Date of post-ITV EF measurement"
+
 
 *** Define patients vars
 * Intervention (inclu or excluded)

@@ -269,4 +269,5 @@ The development of the Stata code is documented in GitHub's "commits" section, a
     - Added explanatory figures to manuscript: patient flow figure + example of cardiac PET scan
 
 ### Changes after submission
-...
+- 3.0 Reviewer comments.
+    - Added days from intervention to post-itv EF measurement.

@@ -29,5 +29,19 @@ local pval = string(round(`r(p_exact)', 0.01), "%4.2f")
 putdocx text (`"Using Wilcoxon rank-sum test to test for a difference in hibernation (as a continuous variable) between the two groups results in a p-value of `pval' (same p-value as in the supplementary table)"'), linebreak
 
 
+*** Days from ITV until post-EF measure
+putdocx paragraph, style(Heading2)
+putdocx text ("Days between intervention and follow-up EF measurement")
+putdocx paragraph
+
+use Data/cohort.dta, clear
+gen diff = date_efpost-date_itv
+su diff, detail
+
+foreach x in min max p1 p5 p10 p25 p50 p75 p90 p95 p99 {
+	putdocx text ("`x': `r(`x')' days"), linebreak
+}
+
+
 *** Export
 putdocx save Output/TextMisc, replace
