@@ -205,12 +205,12 @@ text_table, file("Output/TabPatCharByEF.dta") vars(rowname col_total) ///
 	header(1) left(1) ///
 	subheader(`"if varname=="BOLD""')
 text_footnote, ///
-	notes("Values are shown as mean (SD), n (%) or median (IQR range 25th to 75th percentile)." ///
+	notes("Values are shown as mean (SD), n (%) or median (range)." ///
 	"* Number of segments in area of intervention (up to 17) with at least 10% hibernating tissue divided by the number of coronary arteries intervened upon. Example: 3 hibernating segments in LAD + 1 in RCA / 2 arteries = 2." ///
 	"† Average coronary flow reserve across the area(s) of intervention." ///
 	"‡ Average myocardial glucose uptake across area(s) of intervention.") ///
 	linebreak ///
-	abbrev("CABG CTO HEC IQR LAD LCx PCI RCA SD")
+	abbrev("CABG CTO HEC LAD LCx PCI RCA SD")
 
 * Tab 2
 text_heading2, text("Table 2 - Patient characteristics stratified by LVEF-improvement after revascularizatiion intervention") sectionbreak
@@ -221,7 +221,7 @@ text_footnote, ///
 	notes("P-values for differences were calculated using Fisher's exact test (sex, diabetes, type of intervention, and area of intervention), Student's t-test (age and ejection-fraction), and Wilcoxon rank-sum test (remaining variables)." ///
 	"* † ‡ See table 1 footnotes.") ///
 	linebreak ///
-	abbrev("CABG CTO HEC IQR LAD LCx PCI RCA SD")
+	abbrev("CABG CTO HEC LAD LCx PCI RCA SD")
 	
 
 ** Save
@@ -255,7 +255,7 @@ text_table, file("Output/TabPatCharExcl.dta") vars(rowname col_1 col_0 col_pval)
 	subheader(`"if varname=="BOLD""')
 text_footnote, notes("* † ‡ See table 1 footnotes in manuscript.") ///
 	linebreak ///
-	abbrev("CABG CTO HEC IQR LAD LCx PCI RCA SD")
+	abbrev("CABG CTO HEC LAD LCx PCI RCA SD")
 
 * Sup 2
 text_heading2, text("Supplementary 2 - Areas of intervention compared to areas of hibernation") sectionbreak
@@ -296,7 +296,7 @@ text_table, file("Output/TabPatCharByDM.dta") vars(rowname col_1 col_0) ///
 	subheader(`"if varname=="BOLD""')
 text_footnote, notes("Prespecified analysis. Not presented in paper as it did not add any new insights. * † ‡ See table 1 footnotes in manuscript.") ///
 	linebreak ///
-	abbrev("CABG CTO HEC IQR LAD LCx PCI RCA SD")
+	abbrev("CABG CTO HEC LAD LCx PCI RCA SD")
 
 * AUC subgroup analyses
 text_heading2, text("ROC AUC sensitivity analysis stratified by patient characteristics") sectionbreak landscape

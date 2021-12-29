@@ -271,3 +271,5 @@ The development of the Stata code is documented in GitHub's "commits" section, a
 ### Changes after submission
 - 3.0 Reviewer comments.
     - Added days from intervention to post-itv EF measurement.
+- 3.1 Reviewer comments.
+    - Changed IQR to range in all tables

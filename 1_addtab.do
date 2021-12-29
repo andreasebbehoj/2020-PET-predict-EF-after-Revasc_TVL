@@ -117,6 +117,14 @@ foreach cat of global addtab_columncats {
 				+ string(round(`r(p75)' `format') ///
 				+ ")"
 		}
+		* Range
+		else if "`parenthesis'"=="range" {
+			local result = "`result' (" ///
+				+ string(round(`r(min)' `format') ///
+				+ "-" ///
+				+ string(round(`r(max)' `format') ///
+				+ ")"
+		}
 		* Other parenthesis
 		else {
 			local result = "`result' (" ///
