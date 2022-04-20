@@ -205,6 +205,19 @@ gen pet_hiber_aoi = sum/itv_n
 label var pet_hiber_aoi "Hibernating tissue in n;Area of intervention *"
 drop sum pet_hibersegments hiberitv_*
 
+* Binary category (for stratified analysis)
+recode pet_hiber_overall ///
+	(0/2		= 0 "Median or below") ///
+	(2.0001/100 = 1 "Above median") ///
+	, gen(pet_hiber_bin) label(pet_hiber_bin_)
+label var pet_hiber_bin "Hibernating tissue above/below median"
+
+recode pet_hiber_overall ///
+	(0/4.999		= 0 "Below 5") ///
+	(5/100 = 1 "5 or above") ///
+	, gen(pet_hiber_bin2) label(pet_hiber_bin2_)
+label var pet_hiber_bin2 "Hibernating tissue above/below 5"
+
 
 ** Coronary flow reserve (stress-flow/rest-flow, has no unit)
 describe *cfr* // 8 patients wo. CFR, since they could not tolerate adenosis-induced stress-flow

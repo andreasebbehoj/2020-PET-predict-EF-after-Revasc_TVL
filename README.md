@@ -273,3 +273,5 @@ The development of the Stata code is documented in GitHub's "commits" section, a
     - Added days from intervention to post-itv EF measurement.
 - 3.1 Reviewer comments.
     - Changed IQR to range in all tables
+- 3.2 Reviewer comments.
+  - Added hibernation to stratified sensitivity analysis of ROC curves

@@ -72,6 +72,18 @@ addtab_header, varname("itv_cat==2") rowname("- LCx")
 addtab_header, varname("itv_cat==3") rowname("- RCA")
 addtab_header, varname("itv_cat==4") rowname("- Multiple areas")
 
+* Hibernation status
+addtab_header, varname(BOLD) rowname("Hibernation")
+
+addtab_header, varname(GROUPHEADER) rowname("Hibernation above/below median")
+addtab_header, varname("pet_hiber_bin==1") rowname("- Above")
+addtab_header, varname("pet_hiber_bin==0") rowname("- Median or below")
+
+addtab_header, varname(GROUPHEADER) rowname("Hibernation above/below 5")
+addtab_header, varname("pet_hiber_bin2==1") rowname("- 5 or above")
+addtab_header, varname("pet_hiber_bin2==0") rowname("- Below 5")
+
+
 ** Modify headers in table
 frame table: drop col_*
 frame table: gen no = "N EF improved_P/N total" if _n==1
@@ -85,7 +97,7 @@ foreach expvar of global expvars {
 *** Calculate AUC by covar
 local format = `", 0.01), "%4.2f" "'
 
-foreach row in "!mi(id)" "pat_sex==1" "pat_sex==0" "pat_dm==1" "pat_dm==0" "ef_pre_median==0" "ef_pre_median==1" "itv_cat==1" "itv_cat==2" "itv_cat==3" "itv_cat==4" {
+foreach row in "!mi(id)" "pat_sex==1" "pat_sex==0" "pat_dm==1" "pat_dm==0" "ef_pre_median==0" "ef_pre_median==1" "itv_cat==1" "itv_cat==2" "itv_cat==3" "itv_cat==4" "pet_hiber_bin==1" "pet_hiber_bin==0" "pet_hiber_bin2==1" "pet_hiber_bin2==0" {
 	di "`row'"
 	* N
 	qui: count if `row' & ef_prim==1
